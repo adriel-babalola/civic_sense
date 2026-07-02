@@ -1,168 +1,271 @@
-# CivicSense — Project Context
+# CivicSense — WhatsApp AI Fact-Checking Bot for Nigerians
 
-## What We Are Building
-CivicSense is a WhatsApp AI fact-checking bot for Nigerians.
-A user forwards any political rumour or claim to our WhatsApp number.
-Our bot extracts the claim, queries a Nigerian civic knowledge base,
-calls Gemini, and returns a verdict in under 30 seconds.
+> **Send a rumour to WhatsApp. Get the truth back.**
 
-No app. No sign-up. Just send a message and get the truth back.
+CivicSense is a real-time fact-checking bot that lives inside WhatsApp. No app download. No sign-up. Any Nigerian can forward a political rumour, claim, or headline to our WhatsApp number and receive a structured, sourced verdict within 20 seconds.
 
-## The One Line
-"Send a rumour to WhatsApp. Get the truth back."
-
-## Why This Wins
-Every other team will demo a website form on a laptop.
-We hand a judge a phone. They type a real Nigerian claim into WhatsApp.
-The bot replies with a verdict in 20 seconds. That is the product working
-in real life, in the judges hands.
+**Live:** WhatsApp via Twilio Sandbox | **Dashboard:** [civicsense.vercel.app](https://civicsense.vercel.app)
 
 ---
 
-## Folder Structure
+## The Problem
 
-civicsense/
-├── CONTEXT.md            (This file — read before touching anything)
-├── bot_server/           (PRIMARY — the WhatsApp bot and AI pipeline)
-│   ├── server.js         (Express webhook entry point)
-│   ├── scraper.js        (Background RSS scraper, runs every 30 mins)
-│   ├── services/
-│   │   ├── gemini.js     (Gemini RAG fact-check logic)
-│   │   └── db.js         (MongoDB connection, read and write)
-│   ├── data/
-│   │   └── civic_kb.json (Manually curated Nigerian civic knowledge base)
-│   ├── .env.example      (Copy to .env and fill in your keys)
-│   └── package.json
-│
-└── fc_dashboard/         (SECONDARY — public web feed, build after bot works)
-    ├── App.jsx           (React page pulling recent fact-checks from MongoDB)
-    ├── index.html
-    └── vercel.json
+Nigerian political discourse is flooded with misinformation — fake news about elections, fuel prices, government policies, security incidents, and economic data spreads faster than corrections. Most fact-checking tools require visiting a website, which is a non-starter for the 60%+ of Nigerians who experience the internet primarily through WhatsApp.
+
+## The Solution
+
+Meet CivicSense — "Kratos." A WhatsApp bot powered by AI that:
+1. Receives any political claim forwarded to a WhatsApp number
+2. Searches a curated Nigerian civic knowledge base **and** live Nigerian news sources
+3. Runs the evidence through Gemini 2.5 Flash for a structured verdict
+4. Replies within 20 seconds with a clear verdict: **VERIFIED, MISLEADING, FALSE, or UNVERIFIED**
+
+No website to visit. No app to install. The bot meets users where they already are.
 
 ---
 
-## How the Bot Works (Data Flow)
+## Architecture
 
-1. User sends WhatsApp message to our Twilio number
-2. Twilio fires a POST request to bot_server/server.js
-3. server.js reads the message and checks what command it is:
-   - Default: run fact-check pipeline
-   - "What is happening in [State]": run conflict tracker (stretch goal)
-   - "Report": start anonymous reporting flow (stretch goal)
-4. Fact-check pipeline:
-   a. gemini.js embeds the user claim
-   b. Searches civic_kb.json + scraped news in MongoDB
-   c. Passes retrieved context + claim to Gemini API
-   d. Gemini returns structured verdict
-5. server.js sends verdict back to user via Twilio
-6. Fact-check is logged to MongoDB (fc_dashboard reads from here)
+```
+WhatsApp User → Twilio Webhook → Express Server (server.js)
+                                     │
+                          ┌──────────┼──────────┐
+                          ▼          ▼          ▼
+                    Tavily API   civic_kb.json   Gemini 2.5 Flash
+                   (live news)  (curated facts)  (RAG reasoning)
+                          │          │          │
+                          └──────────┼──────────┘
+                                     ▼
+                              Formatted Verdict
+                                     │
+                          ┌──────────┼──────────┐
+                          ▼          ▼          ▼
+                     Twilio Reply   MongoDB     Dashboard
+                     (WhatsApp)   (persistence) (React SPA)
+```
 
----
+### Data Flow
 
-## Verdict Format (What Gemini Returns)
-
-Every response must follow this structure exactly:
-
-*VERDICT: [VERIFIED / MISLEADING / FALSE / UNVERIFIED]*
-
-*What we found:*
-2 to 3 sentences of plain English explaining the evidence.
-
-*Source:* [Name of source from knowledge base or scraped news]
-
----
-
-## The Knowledge Base (civic_kb.json)
-
-Located at bot_server/data/civic_kb.json
-This is a manually curated array of Nigerian civic facts.
-Format:
-
-[
-  {
-    "id": "001",
-    "topic": "fuel subsidy",
-    "claim": "The fuel subsidy was removed in May 2023",
-    "verdict": "VERIFIED",
-    "explanation": "President Tinubu announced the removal during his inauguration speech on May 29 2023",
-    "source": "Premium Times"
-  }
-]
-
-Add facts here. Accuracy beats quantity. Target 60 to 80 entries.
-Topics to cover: fuel subsidy, NASS bills, INEC election results,
-federal budget figures, CBN policies, security incidents.
+1. **User** sends a WhatsApp message with a claim
+2. **Twilio** fires a POST to `/webhook` on the Express server
+3. **Tavily Search API** fetches 5 relevant live results from Nigerian news domains (Premium Times, Punch, TheCable, Channels TV, Vanguard, Daily Post)
+4. **Knowledge Base** (civic_kb.json, 25 curated entries) is searched for keyword matches
+5. **Gemini 2.5 Flash** via OpenRouter receives the claim + KB context + live search results and returns a structured verdict
+6. **Verdict** is formatted, sent back to the user via Twilio, and logged to MongoDB for the public dashboard
 
 ---
 
-## Environment Variables
+## Features
 
-Copy .env.example to .env and fill in:
-
-GEMINI_API_KEY=
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-TWILIO_WHATSAPP_NUMBER=
-MONGODB_URI=
-PORT=3000
-
-Never commit .env to GitHub.
+| Feature | Status | Details |
+|---|---|---|
+| **WhatsApp Fact-Checking** | ✅ **Live** | Twilio webhook → AI pipeline → instant reply |
+| **Live News Search** | ✅ **Live** | Tavily API queries 6 major Nigerian news domains |
+| **Civic Knowledge Base** | ✅ **Live** | 25 curated entries covering fuel subsidy, elections, CBN policy, security, education |
+| **Fact-Check Dashboard** | ✅ **Live** | React SPA with real-time feed, stats, trends, export |
+| **Interactive Chat UI** | ✅ **Live** | Web interface for fact-checking without WhatsApp |
+| **MongoDB Persistence** | ✅ **Live** | All verdicts logged with timestamps and channel metadata |
+| **Conflict Tracker** | 🔄 **Beta** | Real-time conflict monitoring by state and LGA — in active development |
+| **Anonymous Reporting** | 🔄 **Beta** | Submit misconduct reports with identity protection — in active development |
+| **RSS News Scraper** | 📋 **Planned** | Background scraper for continuous news ingestion |
 
 ---
 
 ## Tech Stack
 
-- Runtime: Node.js
-- Framework: Express
-- AI: Gemini 2.5 Flash via Google AI SDK
-- Database: MongoDB Atlas (free tier)
-- WhatsApp Gateway: Twilio WhatsApp Sandbox
-- Scraper: axios + cheerio targeting RSS feeds
-- Dashboard: React + Tailwind deployed on Vercel
-- Bot Deployment: Railway
+| Layer | Technology |
+|---|---|
+| **Runtime** | Node.js |
+| **Framework** | Express 4 |
+| **AI Model** | Gemini 2.5 Flash (via OpenRouter API) |
+| **Web Search** | Tavily API (Nigerian news domain-scoped) |
+| **Database** | MongoDB Atlas (free tier) |
+| **WhatsApp Gateway** | Twilio WhatsApp Sandbox |
+| **Web Dashboard** | React 19 + React Router 7 |
+| **Styling** | Tailwind CSS v4 |
+| **Dashboard Build** | Vite 6 |
+| **Dashboard Deploy** | Vercel |
+| **Bot Deploy** | Railway |
 
 ---
 
-## Feature Ownership
+## Project Structure
 
-| Feature | Folder | Owner | Priority |
-|---|---|---|---|
-| WhatsApp webhook | bot_server/server.js | adriel-babalola | MUST SHIP |
-| Gemini RAG pipeline | bot_server/services/gemini.js | debugAyo | MUST SHIP |
-| MongoDB connection | bot_server/services/db.js | debugAyo | MUST SHIP |
-| Civic knowledge base | bot_server/data/civic_kb.json | adriel-babalola | MUST SHIP |
-| RSS scraper | bot_server/scraper.js | adriel-babalola | HIGH |
-| Public dashboard | fc_dashboard/ | debugAyo | MEDIUM |
-| Conflict tracker | bot_server/server.js (new branch) | — | STRETCH |
-| Anonymous reporting | bot_server/server.js (new branch) | — | STRETCH |
+```
+civic_sense/
+├── bot_server/                        # WhatsApp bot + AI pipeline
+│   ├── server.js                      # Express webhook + REST API
+│   ├── package.json
+│   ├── .env.example
+│   ├── services/
+│   │   ├── gemini.js                  # Gemini RAG via OpenRouter
+│   │   ├── search.js                  # Tavily web search
+│   │   └── db.js                      # MongoDB connection + schema
+│   ├── data/
+│   │   └── civic_kb.json              # 25 curated Nigerian civic facts
+│   └── test/
+│       └── testKratos.js              # 20-test claim harness
+│
+├── fc_dashboard/                      # Public web dashboard
+│   ├── src/
+│   │   ├── App.jsx                    # Router + layout
+│   │   ├── pages/
+│   │   │   ├── Dashboard.jsx          # Live feed, stats, widgets
+│   │   │   ├── Chat.jsx               # Interactive fact-check chat
+│   │   │   ├── ConflictTracker.jsx    # Beta — placeholder
+│   │   │   └── Reports.jsx            # Beta — placeholder
+│   │   ├── components/
+│   │   │   ├── FactCheckCard.jsx      # Verdict card with source pills
+│   │   │   ├── FactCheckModal.jsx     # Submit claim modal
+│   │   │   ├── Feed.jsx              # Auto-refreshing feed
+│   │   │   ├── Sidebar.jsx           # Navigation sidebar
+│   │   │   ├── SkeletonCard.jsx      # Loading shimmer
+│   │   │   └── StatsRow.jsx          # Verdict stat counters
+│   │   └── utils/
+│   │       └── parseVerdict.js        # Regex verdict parser
+│   ├── index.html
+│   ├── vercel.json
+│   └── vite.config.js
+│
+├── CONTEXT.md                         # Original project brief
+└── README.md                          # This file
+```
 
 ---
 
-## Submission Requirements (Friday 2PM Deadline)
+## API Endpoints
 
-- [ ] Deployed bot URL on Railway (not ngrok)
-- [ ] WhatsApp bot responds to at least 10 test claims correctly
-- [ ] GitHub repo with meaningful commit history and clear README
-- [ ] fc_dashboard deployed on Vercel with live fact-check feed
-- [ ] Pitch deck ready (5 slides max)
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/` | Health check |
+| `POST` | `/webhook` | Twilio WhatsApp webhook |
+| `POST` | `/api/chat` | Submit a claim for fact-checking (JSON) |
+| `GET` | `/api/factchecks` | Get recent fact-checks (20 items) |
+| `GET` | `/api/fact-checks` | Get recent fact-checks (50 items) |
+
+### Example: POST /api/chat
+
+```json
+// Request
+{ "claim": "Did Tinubu remove the fuel subsidy?" }
+
+// Response
+{
+  "success": true,
+  "data": {
+    "claim": "Did Tinubu remove the fuel subsidy?",
+    "verdict": "*VERDICT: VERIFIED*\n*Confidence: 95%*\n*What we found:*\nPresident Tinubu announced the removal of the petrol subsidy during his inauguration speech on May 29 2023. Fuel prices rose from 185 naira per litre to over 500 naira. The policy has been confirmed by NNPC and major media outlets.\n*Source:*\nhttps://www.premiumtimesng.com/..."
+  }
+}
+```
 
 ---
 
-## The Demo Script (Saturday 3PM)
+## Verdict Format
 
-1. Hand judge the phone
+Every response follows this exact structure:
+
+```
+*VERDICT: [VERIFIED / MISLEADING / FALSE / UNVERIFIED]*
+*Confidence: [0-100]%*
+*What we found:*
+[2–4 plain English sentences explaining the evidence]
+*Source:*
+[List of live URLs from search results]
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- MongoDB connection string (Atlas free tier)
+- OpenRouter API key
+- Tavily API key
+- Twilio account with WhatsApp Sandbox enabled
+
+### Setup
+
+```bash
+# Clone the repo
+git clone https://github.com/adriel-babalola/civic_sense.git
+cd civic_sense/bot_server
+
+# Install dependencies
+npm install
+
+# Set up environment
+cp .env.example .env
+# Fill in your keys (see .env.example)
+
+# Start the server
+npm start
+
+# Run the test harness (20 claims)
+npm test
+```
+
+### Environment Variables
+
+| Variable | Description |
+|---|---|
+| `OPENROUTER_API_KEY` | OpenRouter API key for Gemini 2.5 Flash |
+| `TAVILY_API_KEY` | Tavily search API key |
+| `MONGODB_URI` | MongoDB Atlas connection string |
+| `TWILIO_ACCOUNT_SID` | Twilio account SID |
+| `TWILIO_AUTH_TOKEN` | Twilio auth token |
+| `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp number |
+| `PORT` | Server port (default: 3000) |
+
+---
+
+## The Demo
+
+1. Hand a judge the phone
 2. They type any Nigerian political claim into WhatsApp
-3. Bot replies with verdict in under 30 seconds
-4. Type "What is happening in Kano?" — conflict tracker responds
-5. Close: "Three civic tools. One WhatsApp number.
-   No app. No sign-up. Any Nigerian can use this right now."
+3. Bot replies with a verdict in under 30 seconds
+4. Type "What is happening in Kano?" — Conflict Tracker responds (Beta)
+5. Type "Report" — Anonymous Reporting flow starts (Beta)
+6. Close: *"Three civic tools. One WhatsApp number. No app. No sign-up. Any Nigerian can use this right now."*
 
 ---
 
-## Ground Rules
+## Roadmap
 
-- Do not add new features until the fact-checker works end to end
-- Do not merge to main unless your feature is tested and working
-- Commit often with meaningful messages ("add gemini RAG pipeline" not "update")
-- If something breaks, check .env keys first, then check MongoDB connection
-- The bot must work on Saturday. Everything else is secondary.
+- [x] WhatsApp webhook with Twilio
+- [x] Gemini RAG fact-check pipeline
+- [x] 25-entry civic knowledge base
+- [x] Live web search via Tavily
+- [x] MongoDB persistence
+- [x] Public fact-check dashboard
+- [x] Interactive chat UI
+- [ ] Grow knowledge base to 60–80 entries
+- [x] **Conflict Tracker** — Beta (in development)
+- [x] **Anonymous Reporting** — Beta (in development)
+- [ ] RSS news scraper for continuous news ingestion
+- [ ] Multi-language support (Pidgin, Yoruba, Hausa, Igbo)
+
+---
+
+## Team
+
+| Role | Person |
+|---|---|
+| WhatsApp Webhook & Backend | adriel-babalola |
+| AI Pipeline & Dashboard | debugAyo |
+| Knowledge Base Curation | adriel-babalola |
+
+---
+
+## Acknowledgements
+
+- **Gemini 2.5 Flash** via OpenRouter for AI reasoning
+- **Tavily** for Nigerian news search
+- **Twilio** for WhatsApp integration
+- **MongoDB Atlas** for free-tier database hosting
+- **Premium Times, Punch, TheCable, Channels TV, Vanguard, Daily Post** for Nigerian journalism
+
+---
+
+*Built for the Nigerian Civic Tech space. Fighting misinformation one WhatsApp message at a time.*
