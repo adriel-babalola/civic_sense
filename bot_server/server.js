@@ -26,6 +26,36 @@ app.get("/api/fact-checks", async (req, res) => {
   }
 });
 
+app.get("/api/factchecks", async (req, res) => {
+  try {
+    const checks = await getRecentFactChecks(20);
+    res.json({ success: true, data: checks });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/chat", async (req, res) => {
+  const { claim } = req.body;
+  if (!claim || !claim.trim()) {
+    return res.status(400).json({ success: false, error: "No claim provided" });
+  }
+  try {
+    const searchResults = await searchClaim(claim);
+    const verdict = await factCheck(claim, searchResults);
+    await saveFactCheck({
+      claim,
+      verdict,
+      channel: "dashboard",
+      timestamp: new Date(),
+    }).catch((err) => console.error("DB save error:", err.message));
+    res.json({ success: true, data: { claim, verdict } });
+  } catch (err) {
+    console.error("Chat error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post("/webhook", async (req, res) => {
   const message = req.body.Body?.trim();
   const from = req.body.From;
