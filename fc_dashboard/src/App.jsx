@@ -1,41 +1,58 @@
 import { useState, useEffect } from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Chat from "./pages/Chat";
 import ConflictTracker from "./pages/ConflictTracker";
 import Reports from "./pages/Reports";
-import { API_BASE } from "./config";
-
-async function fetchStats() {
-  try {
-    const res = await fetch(`${API_BASE}/api/factchecks`);
-    const json = await res.json();
-    return json.data?.length || 0;
-  } catch {
-    return 0;
-  }
-}
+import { API_BASE, WHATSAPP_NUMBER } from "./config";
 
 export default function App() {
   const [stats, setStats] = useState(0);
 
   useEffect(() => {
-    fetchStats().then(setStats);
-    const interval = setInterval(() => fetchStats().then(setStats), 30000);
+    async function get() {
+      try {
+        const res = await fetch(`${API_BASE}/api/factchecks`);
+        const json = await res.json();
+        setStats(json.data?.length || 0);
+      } catch {}
+    }
+    get();
+    const interval = setInterval(get, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
     <BrowserRouter>
-      <div className="flex h-screen overflow-hidden bg-surface">
+      <div className="h-screen overflow-hidden bg-[#0A0A0A]">
+        <header className="fixed top-0 left-0 right-0 z-50 h-14 flex items-center justify-between px-6 bg-[#0A0A0A] border-b border-[#1E1E1E]">
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-white tracking-tight">
+              CivicSense
+            </h1>
+            <span className="text-xs text-[#6B7280] hidden sm:inline">
+              Send a rumour. Get the truth back.
+            </span>
+          </div>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1.5 text-xs text-[#6B7280]">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C55E] animate-pulse" />
+              Live
+            </span>
+            <span className="text-xs text-[#6B7280]">{WHATSAPP_NUMBER}</span>
+          </div>
+        </header>
+
         <Sidebar stats={stats} />
-        <main className="flex-1 overflow-hidden">
+
+        <main className="md:ml-64 ml-0 h-full pt-14 overflow-y-auto">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/conflict" element={<ConflictTracker />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
       </div>

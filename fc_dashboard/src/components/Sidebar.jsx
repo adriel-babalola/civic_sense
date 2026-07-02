@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Menu, X, LayoutDashboard, MessageSquare, MapPin, Flag, Shield } from "lucide-react";
+import { Menu, X, LayoutDashboard, MapPin, Flag, MessageSquare, User, Settings, LogOut } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -9,33 +9,24 @@ const LINKS = [
   { to: "/reports", label: "Anonymous Reports", icon: Flag },
 ];
 
-export default function Sidebar({ stats }) {
+export default function Sidebar() {
   const [open, setOpen] = useState(false);
 
   return (
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="fixed top-4 left-4 z-50 md:hidden glass-card p-2.5 rounded-xl"
+        className="fixed top-[58px] left-4 z-50 md:hidden bg-[#141414] p-2.5 rounded-xl border border-[#1E1E1E]"
       >
         {open ? <X size={18} /> : <Menu size={18} />}
       </button>
 
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-60 bg-sidebar border-r border-white/[0.04] flex flex-col transition-transform duration-300 ${
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0A0A0A] border-r border-[#1E1E1E] flex flex-col transition-transform duration-200 pt-14 ${
           open ? "translate-x-0" : "-translate-x-full"
         } md:translate-x-0`}
       >
-        <div className="p-6 border-b border-white/[0.04]">
-          <h1 className="text-xl font-bold tracking-tight">
-            <span className="gradient-text">CivicSense</span>
-          </h1>
-          <p className="text-[11px] text-gray-600 mt-1.5 tracking-wide uppercase">
-            Kratos fact-check engine
-          </p>
-        </div>
-
-        <nav className="flex-1 p-3 space-y-0.5">
+        <nav className="flex-1 p-3 space-y-0.5 pt-5">
           {LINKS.map((l) => (
             <NavLink
               key={l.to}
@@ -43,30 +34,42 @@ export default function Sidebar({ stats }) {
               end={l.to === "/"}
               onClick={() => setOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all ${
                   isActive
-                    ? "bg-accent/10 text-accent font-medium shadow-[inset_0_0_0_1px_rgba(0,200,83,0.15)]"
-                    : "text-gray-500 hover:text-gray-300 hover:bg-white/[0.03]"
+                    ? "bg-[#1E1E1E] text-white font-medium"
+                    : "text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03]"
                 }`
               }
             >
-              <l.icon size={17} strokeWidth={1.5} />
+              <l.icon size={16} strokeWidth={1.5} />
               {l.label}
             </NavLink>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-white/[0.04]">
-          <div className="flex items-center gap-2.5 text-[11px] text-gray-600">
-            <Shield size={13} />
-            <span>{stats} claims fact-checked</span>
+        <div className="px-4 py-3 border-t border-[#1E1E1E]">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-[#1E1E1E] flex items-center justify-center">
+                <User size={13} className="text-[#6B7280]" />
+              </div>
+              <p className="text-sm text-white">Guest</p>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <button className="p-1.5 rounded-md text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03] transition-colors">
+                <Settings size={14} />
+              </button>
+              <button className="p-1.5 rounded-md text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03] transition-colors">
+                <LogOut size={14} />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-30 md:hidden"
           onClick={() => setOpen(false)}
         />
       )}

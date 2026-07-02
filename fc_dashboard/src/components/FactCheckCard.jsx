@@ -1,95 +1,84 @@
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
 import { parseVerdict } from "../utils/parseVerdict";
 
-const CONFIG = {
-  VERIFIED: {
-    icon: CheckCircle,
-    color: "text-verified",
-    bg: "bg-verified/8",
-    border: "border-verified/15",
-    dot: "bg-verified",
-  },
-  FALSE: {
-    icon: XCircle,
-    color: "text-false",
-    bg: "bg-false/8",
-    border: "border-false/15",
-    dot: "bg-false",
-  },
-  MISLEADING: {
-    icon: AlertTriangle,
-    color: "text-misleading",
-    bg: "bg-misleading/8",
-    border: "border-misleading/15",
-    dot: "bg-misleading",
-  },
-  UNVERIFIED: {
-    icon: HelpCircle,
-    color: "text-unverified",
-    bg: "bg-unverified/8",
-    border: "border-unverified/15",
-    dot: "bg-unverified",
-  },
+const BADGE_STYLES = {
+  VERIFIED: "bg-[#10B981]/10 text-[#10B981] border-[#10B981]/20",
+  FALSE: "bg-[#EF4444]/10 text-[#EF4444] border-[#EF4444]/20",
+  MISLEADING: "bg-[#F59E0B]/10 text-[#F59E0B] border-[#F59E0B]/20",
+  UNVERIFIED: "bg-[#6B7280]/10 text-[#6B7280] border-[#6B7280]/20",
 };
 
-export default function FactCheckCard({ item }) {
+export default function FactCheckCard({ item, first }) {
   const parsed = parseVerdict(item.verdict);
   const v = parsed.verdict;
-  const cfg = CONFIG[v] || CONFIG.UNVERIFIED;
-  const Icon = cfg.icon;
+  const badge = BADGE_STYLES[v] || BADGE_STYLES.UNVERIFIED;
 
   const timeAgo = item.timestamp
     ? formatDistanceToNow(new Date(item.timestamp), { addSuffix: true })
     : "";
 
   const sourceUrl = parsed.source?.match(/https?:\/\/[^\s]+/gi);
+  const hasEvidence = parsed.evidence && parsed.evidence.length > 0;
 
   return (
-    <div className="glass-card rounded-2xl p-5 space-y-3 hover:border-white/[0.12] transition-all duration-300 group">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3 flex-1 min-w-0">
-          <span className={`w-1.5 h-1.5 rounded-full mt-2 shrink-0 ${cfg.dot}`} />
-          <p className="text-sm font-medium text-white/90 leading-snug">
-            "{item.claim}"
-          </p>
-        </div>
+    <div
+      className={`rounded-xl border bg-[#141414] overflow-hidden ${
+        first ? "border-[#22C55E]/30" : "border-[#1E1E1E]"
+      }`}
+    >
+      {/* Top row: badge + timestamp */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-3">
         <span
-          className={`shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${cfg.bg} ${cfg.color} ${cfg.border}`}
+          className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-md border ${badge}`}
         >
-          <Icon size={13} />
           {v}
         </span>
+        <span className="text-xs text-[#6B7280]">{timeAgo}</span>
       </div>
 
-      {parsed.evidence && (
-        <p className="text-sm text-gray-500 leading-relaxed pl-5">
-          {parsed.evidence}
+      <div className="border-t border-[#1E1E1E]/50" />
+
+      {/* Claim headline */}
+      <div className="px-5 py-3">
+        <p className="text-sm font-semibold text-white leading-snug">
+          &ldquo;{item.claim}&rdquo;
         </p>
-      )}
-
-      {sourceUrl && sourceUrl.length > 0 && (
-        <div className="flex flex-wrap gap-1.5 pl-5">
-          {sourceUrl.map((url, i) => (
-            <a
-              key={i}
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-accent/70 hover:text-accent underline underline-offset-2 truncate max-w-[260px] transition-colors"
-            >
-              {url}
-            </a>
-          ))}
-        </div>
-      )}
-
-      <div className="flex items-center justify-between text-[11px] text-gray-700 pt-0.5 pl-5">
-        <span>{timeAgo}</span>
-        {parsed.confidence > 0 && (
-          <span className="text-gray-600">{parsed.confidence}% confidence</span>
-        )}
       </div>
+
+      {/* Evidence (only if present) */}
+      {hasEvidence && (
+        <>
+          <div className="border-t border-[#1E1E1E]/50" />
+          <div className="px-5 py-3">
+            <p className="text-sm text-[#A1A1AA] leading-relaxed">
+              {parsed.evidence}
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Sources as pills */}
+      {(sourceUrl?.length > 0 || parsed.source) && (
+        <>
+          <div className="border-t border-[#1E1E1E]/50" />
+          <div className="px-5 py-3 flex flex-wrap gap-1.5">
+            {sourceUrl?.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs bg-[#0A0A0A] text-[#6B7280] px-2.5 py-1 rounded-md border border-[#1E1E1E] hover:text-[#A1A1AA] hover:border-[#333] transition-all"
+              >
+                {new URL(url).hostname.replace("www.", "")}
+              </a>
+            ))}
+            {!sourceUrl?.length && parsed.source && (
+              <span className="text-xs text-[#6B7280]">{parsed.source}</span>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
