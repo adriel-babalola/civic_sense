@@ -1,0 +1,202 @@
+[
+  {
+    "id": "001",
+    "topic": "fuel subsidy",
+    "claim": "The fuel subsidy was removed in May 2023",
+    "verdict": "VERIFIED",
+    "explanation": "President Tinubu announced the removal of the petrol subsidy during his inauguration speech on May 29 2023. Fuel prices rose from 185 naira per litre to over 500 naira.",
+    "source": "Premium Times, Punch"
+  },
+  {
+    "id": "002",
+    "topic": "naira devaluation exchange rate CBN",
+    "claim": "The CBN devalued the naira and unified exchange rates in June 2023",
+    "verdict": "VERIFIED",
+    "explanation": "The Central Bank of Nigeria under Governor Cardoso unified the official and parallel market exchange rates in June 2023, causing the naira to fall sharply against the dollar.",
+    "source": "CBN official statement, Vanguard"
+  },
+  {
+    "id": "003",
+    "topic": "tinubu age certificate school forgery",
+    "claim": "Tinubu's age and certificate controversy is ongoing",
+    "verdict": "MISLEADING",
+    "explanation": "Claims about Tinubu's certificate have been disputed in court. INEC accepted his credentials for the 2023 election. The matter remains in litigation but he was declared winner.",
+    "source": "TheCable, Premium Times"
+  },
+  {
+    "id": "004",
+    "topic": "INEC election 2023 presidential result Tinubu",
+    "claim": "Bola Tinubu won the 2023 Nigerian presidential election",
+    "verdict": "VERIFIED",
+    "explanation": "INEC declared Bola Ahmed Tinubu of the APC winner of the February 25 2023 presidential election with 8.79 million votes. Peter Obi and Atiku Abubakar challenged the result in court and lost.",
+    "source": "INEC official declaration"
+  },
+  {
+    "id": "005",
+    "topic": "student loan bill education financing",
+    "claim": "Nigeria passed a student loan bill in 2023",
+    "verdict": "VERIFIED",
+    "explanation": "President Tinubu signed the Student Loan Act into law in June 2023 to provide interest-free loans to Nigerian students in public tertiary institutions.",
+    "source": "State House, Premium Times"
+  },
+  {
+    "id": "006",
+    "topic": "cryptocurrency bitcoin ban CBN",
+    "claim": "Nigeria banned cryptocurrency",
+    "verdict": "MISLEADING",
+    "explanation": "The CBN restricted banks from facilitating crypto transactions in 2021 but did not ban individuals from holding crypto. The SEC later introduced a regulatory framework for crypto in 2023.",
+    "source": "CBN circular, SEC Nigeria"
+  },
+  {
+    "id": "007",
+    "topic": "EndSARS protest police brutality SARS",
+    "claim": "SARS was disbanded after the 2020 EndSARS protests",
+    "verdict": "VERIFIED",
+    "explanation": "The Inspector General of Police announced the dissolution of SARS on October 11 2020 following nationwide protests. However reports of continued police brutality persisted.",
+    "source": "Nigeria Police Force statement, Amnesty International"
+  },
+  {
+    "id": "008",
+    "topic": "minimum wage salary workers labour",
+    "claim": "Nigeria increased the minimum wage in 2024",
+    "verdict": "VERIFIED",
+    "explanation": "President Tinubu signed a new national minimum wage of 70,000 naira per month into law in July 2024, up from the previous 30,000 naira.",
+    "source": "State House, NLC"
+  },
+  {
+    "id": "009",
+    "topic": "bandits terrorism insecurity kidnap Zamfara",
+    "claim": "Insecurity and banditry remain major problems in northern Nigeria",
+    "verdict": "VERIFIED",
+    "explanation": "Banditry, kidnapping for ransom, and armed group activity continue to affect Zamfara, Katsina, Sokoto, and Kaduna states as of 2024 according to security agencies and media reports.",
+    "source": "Channels TV, Premium Times"
+  },
+  {
+    "id": "010",
+    "topic": "naira redesign cash scarcity CBN currency",
+    "claim": "The naira redesign policy caused a cash scarcity crisis in early 2023",
+    "verdict": "VERIFIED",
+    "explanation": "The CBN naira redesign policy under Governor Emefiele led to severe cash shortages across Nigeria in January and February 2023. The Supreme Court later ordered the old notes to remain legal tender.",
+    "source": "CBN, Supreme Court ruling, Punch"
+  },
+  {
+    "id": "011",
+    "topic": "inflation CBN printing money economy",
+    "claim": "The CBN printed too much money and caused inflation",
+    "verdict": "MISLEADING",
+    "explanation": "While money supply growth contributed to inflationary pressure, Nigerias inflation is driven by multiple factors including fuel subsidy removal, naira devaluation, food supply shocks, and import costs. Inflation hit 28.9% in December 2023.",
+    "source": "National Bureau of Statistics, CBN"
+  },
+  {
+    "id": "012",
+    "topic": "fuel price NNPC petrol",
+    "claim": "Fuel now costs 200 naira per litre in Nigeria",
+    "verdict": "FALSE",
+    "explanation": "As of 2024, petrol prices range between 600 and 700 naira per litre at filling stations nationwide, following the removal of fuel subsidy in May 2023.",
+    "source": "NNPC, Premium Times"
+  },
+  {
+    "id": "013",
+    "topic": "Supreme Court election victory Tinubu",
+    "claim": "The Supreme Court upheld Tinubu's election victory",
+    "verdict": "VERIFIED",
+    "explanation": "The Supreme Court of Nigeria on January 12 2024 affirmed Bola Tinubu's election as president, dismissing appeals by Atiku Abubakar and Peter Obi.",
+    "source": "Supreme Court of Nigeria, Channels TV"
+  },
+  {
+    "id": "014",
+    "topic": "healthcare free policy",
+    "claim": "Nigeria has free healthcare for all citizens",
+    "verdict": "FALSE",
+    "explanation": "Nigeria does not have a universal free healthcare system. The National Health Insurance Authority (NHIA) covers only a fraction of the population, and most citizens pay out-of-pocket for medical care.",
+    "source": "NHIA, WHO"
+  },
+  {
+    "id": "015",
+    "topic": "ASUU strike payment arrears education",
+    "claim": "The government paid all ASUU strike arrears",
+    "verdict": "UNVERIFIED",
+    "explanation": "While the government made some payments to ASUU after the 2022 strike, there are ongoing disputes about full payment of outstanding arrears. No official confirmation of complete payment exists.",
+    "source": "Premium Times, Vanguard"
+  },
+  {
+    "id": "016",
+    "topic": "Boko Haram insurgency Borno security",
+    "claim": "Borno state is completely free of Boko Haram",
+    "verdict": "FALSE",
+    "explanation": "While the military has degraded Boko Haram's capabilities, sporadic attacks and insurgency activity continue in parts of Borno State as of 2024. The state is not completely free of the group.",
+    "source": "Premium Times, TheCable"
+  },
+  {
+    "id": "017",
+    "topic": "BRICS membership international relations",
+    "claim": "Nigeria joined BRICS in 2024",
+    "verdict": "FALSE",
+    "explanation": "Nigeria has not joined BRICS as of 2024. Nigeria applied for membership in the BRICS bloc but had not been admitted. South Africa remains the only African member of BRICS.",
+    "source": "Vanguard, Punch"
+  },
+  {
+    "id": "018",
+    "topic": "Dangote refinery fuel scarcity petroleum",
+    "claim": "The Dangote refinery has solved Nigerias fuel scarcity",
+    "verdict": "MISLEADING",
+    "explanation": "The Dangote Refinery began producing diesel and aviation fuel in 2024 and petrol in late 2024, but has not fully eliminated fuel scarcity. Production is ramping up gradually.",
+    "source": "Premium Times, Bloomberg"
+  },
+  {
+    "id": "019",
+    "topic": "CBN dollar transactions ban forex",
+    "claim": "The CBN banned dollar transactions in Nigeria",
+    "verdict": "FALSE",
+    "explanation": "The CBN has not banned dollar transactions. It restricted cash withdrawals in foreign currency and introduced policies to manage demand, but individuals and businesses can still legally hold and transact in dollars.",
+    "source": "CBN, TheCable"
+  },
+  {
+    "id": "020",
+    "topic": "national debt borrowing economy",
+    "claim": "Nigeria's debt has exceeded 100 trillion naira",
+    "verdict": "VERIFIED",
+    "explanation": "The Debt Management Office reported Nigerias total public debt rose to approximately 121.67 trillion naira by March 2024, exceeding the 100 trillion mark.",
+    "source": "Debt Management Office, Premium Times"
+  },
+  {
+    "id": "021",
+    "topic": "education out-of-school children",
+    "claim": "Nigeria has the highest number of out-of-school children in the world",
+    "verdict": "VERIFIED",
+    "explanation": "UNESCO reports that Nigeria has approximately 20 million out-of-school children, the highest number globally. This represents about 1 in 5 of all out-of-school children worldwide.",
+    "source": "UNESCO"
+  },
+  {
+    "id": "022",
+    "topic": "election INEC Lagos Obi",
+    "claim": "Peter Obi won the 2023 election in Lagos State",
+    "verdict": "VERIFIED",
+    "explanation": "Peter Obi of the Labour Party won Lagos State with 582,454 votes, defeating Bola Tinubu of the APC who got 572,606 votes in the February 2023 presidential election.",
+    "source": "INEC"
+  },
+  {
+    "id": "023",
+    "topic": "naira exchange rate dollar devaluation",
+    "claim": "The naira is now stronger than the dollar",
+    "verdict": "FALSE",
+    "explanation": "The naira has not strengthened against the dollar. After the float in June 2023, the naira depreciated from about 460 naira per dollar to over 700 naira per dollar at the official market, and higher on the parallel market.",
+    "source": "CBN, FMDQ"
+  },
+  {
+    "id": "024",
+    "topic": "fuel subsidy removal price",
+    "claim": "Petrol prices tripled after subsidy removal",
+    "verdict": "VERIFIED",
+    "explanation": "Pump price of petrol rose from about 195 naira per litre in May 2023 to over 600 naira per litre by mid-2023, and later exceeded 700 naira per litre, representing more than a threefold increase.",
+    "source": "NNPC"
+  },
+  {
+    "id": "025",
+    "topic": "CBN governor Emefiele suspension",
+    "claim": "Godwin Emefiele was suspended as CBN governor in June 2023",
+    "verdict": "VERIFIED",
+    "explanation": "President Tinubu suspended CBN Governor Godwin Emefiele on June 9 2023, and he was subsequently arrested by the DSS and charged with procurement fraud and other offences.",
+    "source": "TheCable"
+  }
+]
