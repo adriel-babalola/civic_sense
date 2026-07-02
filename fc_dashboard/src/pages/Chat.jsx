@@ -158,7 +158,7 @@ export default function Chat() {
         </div>
       </div>
 
-      <div className="border-t border-[#1E1E1E] px-8 py-3 shrink-0">
+      <div className="px-8 py-3 shrink-0">
         <form onSubmit={handleSubmit} className="max-w-[700px] mx-auto flex gap-3">
           <input
             type="text"

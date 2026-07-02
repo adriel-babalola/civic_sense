@@ -14,9 +14,6 @@ export default function Reports() {
           </p>
         </div>
       </div>
-      <footer className="border-t border-[#1E1E1E] px-6 py-3 shrink-0">
-        <p className="text-xs text-[#6B7280] text-center">Built for BuildVerse 2026</p>
-      </footer>
     </div>
   );
 }

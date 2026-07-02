@@ -47,20 +47,20 @@ export default function Sidebar() {
           ))}
         </nav>
 
-        <div className="px-4 py-3 border-t border-[#1E1E1E]">
+        <div className="px-4 py-3.5 border-t border-[#1E1E1E]">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-[#1E1E1E] flex items-center justify-center">
-                <User size={13} className="text-[#6B7280]" />
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[#1E1E1E] flex items-center justify-center">
+                <User size={16} strokeWidth={1.5} className="text-[#6B7280]" />
               </div>
-              <p className="text-sm text-white">Guest</p>
+              <p className="text-sm font-medium text-white/90">Guest</p>
             </div>
-            <div className="flex items-center gap-0.5">
-              <button className="p-1.5 rounded-md text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03] transition-colors">
-                <Settings size={14} />
+            <div className="flex items-center gap-1">
+              <button className="p-2 rounded-lg text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.05] transition-colors">
+                <Settings size={16} strokeWidth={1.5} />
               </button>
-              <button className="p-1.5 rounded-md text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03] transition-colors">
-                <LogOut size={14} />
+              <button className="p-2 rounded-lg text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.05] transition-colors">
+                <LogOut size={16} strokeWidth={1.5} />
               </button>
             </div>
           </div>

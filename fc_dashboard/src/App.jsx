@@ -1,28 +1,12 @@
-import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
 import Chat from "./pages/Chat";
 import ConflictTracker from "./pages/ConflictTracker";
 import Reports from "./pages/Reports";
-import { API_BASE, WHATSAPP_NUMBER } from "./config";
+import { WHATSAPP_NUMBER } from "./config";
 
 export default function App() {
-  const [stats, setStats] = useState(0);
-
-  useEffect(() => {
-    async function get() {
-      try {
-        const res = await fetch(`${API_BASE}/api/factchecks`);
-        const json = await res.json();
-        setStats(json.data?.length || 0);
-      } catch {}
-    }
-    get();
-    const interval = setInterval(get, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <BrowserRouter>
       <div className="h-screen overflow-hidden bg-[#0A0A0A]">
@@ -44,7 +28,7 @@ export default function App() {
           </div>
         </header>
 
-        <Sidebar stats={stats} />
+        <Sidebar />
 
         <main className="md:ml-64 ml-0 h-full pt-14 overflow-y-auto">
           <Routes>
