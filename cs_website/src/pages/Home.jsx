@@ -125,6 +125,34 @@ export default function Home() {
         </div>
       </section>
 
+      {/* DEMO VIDEO */}
+      <section className="relative z-10 py-40 bg-[#050505] border-b border-neutral-900/80">
+        <div className="max-w-6xl mx-auto px-8 grid grid-cols-1 md:grid-cols-2 gap-14 items-center">
+          <div className="aspect-video rounded-2xl overflow-hidden border border-neutral-800/50 shadow-xl">
+            <iframe
+              src="https://www.youtube.com/embed/nhasRYxrBNc"
+              title="CivicSense Overview"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowFullScreen
+              className="w-full h-full"
+            />
+          </div>
+          <div className="space-y-4 text-center md:text-left">
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
+              See CivicSense in Action
+            </h2>
+            <p className="text-sm md:text-base text-neutral-400 leading-relaxed">
+              Watch how the WhatsApp fact-check bot, live incident map, and anonymous reporting system work together to fight misinformation across Nigeria.
+            </p>
+            <div className="flex flex-wrap gap-3 pt-2 justify-center md:justify-start">
+              <span className="text-xs px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 font-medium">~20s response</span>
+              <span className="text-xs px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 font-medium">No sign-up</span>
+              <span className="text-xs px-3 py-1.5 bg-teal-500/10 border border-teal-500/20 rounded-lg text-teal-400 font-medium">WhatsApp only</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER CALL-TO-ACTION (CTA) BLOCK */}
       <section className="relative z-10 py-24 bg-[#050505]">
         <div className="max-w-4xl mx-auto px-6 text-center space-y-8">
