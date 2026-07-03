@@ -15,19 +15,4 @@ export async function fetchIncidents() {
   return json.data || [];
 }
 
-export async function fetchReports(status) {
-  const q = status ? `?status=${status}` : "";
-  const res = await fetch(`${API_BASE}/api/reports${q}`);
-  const json = await res.json();
-  return json.data || [];
-}
 
-export async function approveReport(id) {
-  const res = await fetch(`${API_BASE}/api/reports/${id}/approve`, { method: "PATCH" });
-  return res.json();
-}
-
-export async function rejectReport(id) {
-  const res = await fetch(`${API_BASE}/api/reports/${id}/reject`, { method: "PATCH" });
-  return res.json();
-}

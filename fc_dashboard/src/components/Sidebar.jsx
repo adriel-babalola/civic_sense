@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, MapPin, Flag, MessageSquare, Activity, Shield, User, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Flag, MessageSquare, Activity, User, Settings, LogOut } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },

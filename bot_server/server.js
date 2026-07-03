@@ -17,18 +17,9 @@ app.get("/", (req, res) => {
   res.send("Kratos — CivicSense fact-checking bot is running.");
 });
 
-app.get("/api/fact-checks", async (req, res) => {
-  try {
-    const checks = await getRecentFactChecks(50);
-    res.json(checks);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
 app.get("/api/factchecks", async (req, res) => {
   try {
-    const checks = await getRecentFactChecks(20);
+    const checks = await getRecentFactChecks(50);
     res.json({ success: true, data: checks });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
