@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { Menu, X, MessageSquare } from "lucide-react";
+import { Menu, X, MessageSquare, ExternalLink } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Home" },
@@ -40,6 +40,15 @@ export default function Navbar() {
             </NavLink>
           ))}
           <a
+            href="https://civic-sense-admin-six.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-neutral-400 hover:text-neutral-200 transition-colors flex items-center gap-1"
+          >
+            <ExternalLink size={12} />
+            Admin
+          </a>
+          <a
             href="https://wa.me/14155238886"
             target="_blank"
             rel="noopener noreferrer"
@@ -74,6 +83,16 @@ export default function Navbar() {
                 {l.label}
               </NavLink>
             ))}
+            <a
+              href="https://civic-sense-admin-six.vercel.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setOpen(false)}
+              className="block px-4 py-2.5 text-sm text-neutral-400 hover:text-neutral-200 transition-colors flex items-center gap-1"
+            >
+              <ExternalLink size={12} />
+              Admin
+            </a>
             <a
               href="https://wa.me/14155238886"
               target="_blank"
