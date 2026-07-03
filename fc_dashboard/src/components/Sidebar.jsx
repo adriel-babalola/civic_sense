@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { Menu, X, LayoutDashboard, MapPin, Flag, MessageSquare, User, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Flag, MessageSquare, User, Settings, LogOut, Activity, Shield } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -9,18 +8,9 @@ const LINKS = [
   { to: "/reports", label: "Anonymous Reports", icon: Flag },
 ];
 
-export default function Sidebar() {
-  const [open, setOpen] = useState(false);
-
+export default function Sidebar({ open, onClose }) {
   return (
     <>
-      <button
-        onClick={() => setOpen(!open)}
-        className="fixed top-[58px] left-4 z-50 md:hidden bg-[#141414] p-2.5 rounded-xl border border-[#1E1E1E]"
-      >
-        {open ? <X size={18} /> : <Menu size={18} />}
-      </button>
-
       <aside
         className={`fixed inset-y-0 left-0 z-40 w-64 bg-[#0A0A0A] border-r border-[#1E1E1E] flex flex-col transition-transform duration-200 pt-14 ${
           open ? "translate-x-0" : "-translate-x-full"
@@ -32,7 +22,7 @@ export default function Sidebar() {
               key={l.to}
               to={l.to}
               end={l.to === "/"}
-              onClick={() => setOpen(false)}
+              onClick={onClose}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all ${
                   isActive
@@ -46,6 +36,32 @@ export default function Sidebar() {
             </NavLink>
           ))}
         </nav>
+
+        <div className="px-4 py-3 border-t border-[#1E1E1E]">
+          <div className="bg-[#141414] rounded-lg border border-[#1E1E1E] p-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-medium text-[#6B7280] uppercase tracking-wider">Bot Status</span>
+              <span className="flex items-center gap-1 text-[10px] text-[#10B981]">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#10B981]" />
+                Operational
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#6B7280] flex items-center gap-1.5">
+                <Activity size={11} className="text-[#22C55E]" />
+                Claims Today
+              </span>
+              <span className="text-[#A1A1AA] font-medium">23</span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-[#6B7280] flex items-center gap-1.5">
+                <Flag size={11} className="text-[#F59E0B]" />
+                Pending Reports
+              </span>
+              <span className="text-[#A1A1AA] font-medium">4</span>
+            </div>
+          </div>
+        </div>
 
         <div className="px-4 py-3.5 border-t border-[#1E1E1E]">
           <div className="flex items-center justify-between">
@@ -70,7 +86,7 @@ export default function Sidebar() {
       {open && (
         <div
           className="fixed inset-0 bg-black/60 z-30 md:hidden"
-          onClick={() => setOpen(false)}
+          onClick={onClose}
         />
       )}
     </>

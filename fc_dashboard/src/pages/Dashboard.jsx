@@ -172,7 +172,7 @@ export default function Dashboard() {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="flex-1 overflow-y-auto px-8 py-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="max-w-[1100px] mx-auto space-y-6">
 
           {/* Stats Row */}

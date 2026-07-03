@@ -39,3 +39,46 @@ export async function getRecentFactChecks(limit = 20) {
     return [];
   }
 }
+
+const reportSchema = new mongoose.Schema({
+  type: { type: String, enum: ["violence", "misconduct", "unrest"], required: true },
+  description: { type: String, required: true },
+  state: { type: String, required: true },
+  lga: { type: String, required: true },
+  evidence: String,
+  status: { type: String, enum: ["pending", "approved", "rejected"], default: "pending" },
+  timestamp: { type: Date, default: Date.now },
+});
+
+const Report = mongoose.model("Report", reportSchema);
+
+export async function saveReport(data) {
+  try {
+    await connectDB();
+    return await Report.create(data);
+  } catch (err) {
+    console.error(`Report save error: ${err.message}`);
+    return null;
+  }
+}
+
+export async function getReports(status = null) {
+  try {
+    await connectDB();
+    const query = status ? { status } : {};
+    return await Report.find(query).sort({ timestamp: -1 }).lean();
+  } catch (err) {
+    console.error(`Report read error: ${err.message}`);
+    return [];
+  }
+}
+
+export async function updateReportStatus(id, status) {
+  try {
+    await connectDB();
+    return await Report.findByIdAndUpdate(id, { status }, { new: true }).lean();
+  } catch (err) {
+    console.error(`Report update error: ${err.message}`);
+    return null;
+  }
+}
