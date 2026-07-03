@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, MapPin, Flag, MessageSquare, Activity, Shield, User, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, MapPin, Flag, MessageSquare, Activity, Shield, User, Settings, LogOut, ExternalLink } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -35,6 +35,16 @@ export default function Sidebar({ open, onClose }) {
               {l.label}
             </NavLink>
           ))}
+          <a
+            href="https://civic-sense-admin-six.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={onClose}
+            className="flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm transition-all text-[#6B7280] hover:text-[#A1A1AA] hover:bg-white/[0.03]"
+          >
+            <ExternalLink size={16} strokeWidth={1.5} />
+            Admin
+          </a>
         </nav>
 
         {/* WhatsApp QR + Join Info */}
