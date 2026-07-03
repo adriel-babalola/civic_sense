@@ -4,6 +4,16 @@ import { fetchIncidents } from "../api/client";
 import IncidentCard from "../components/IncidentCard";
 import { RefreshCw, MapPin } from "lucide-react";
 
+const STATES = [
+  "All", "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa",
+  "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti",
+  "Enugu", "FCT", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina",
+  "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo",
+  "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara",
+];
+
+const TYPES = ["All", "violence", "misconduct", "unrest"];
+
 const STATE_COORDS = {
   "Abia": [5.45, 7.49], "Adamawa": [9.33, 12.38], "Akwa Ibom": [5.0, 7.83],
   "Anambra": [6.22, 6.94], "Bauchi": [10.31, 9.84], "Bayelsa": [4.77, 6.07],
@@ -29,6 +39,8 @@ const MARKER_COLORS = {
 export default function Map() {
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [stateFilter, setStateFilter] = useState("All");
+  const [typeFilter, setTypeFilter] = useState("All");
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef([]);
@@ -48,6 +60,12 @@ export default function Map() {
     const interval = setInterval(refresh, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  const filtered = incidents.filter((i) => {
+    if (stateFilter !== "All" && i.state !== stateFilter) return false;
+    if (typeFilter !== "All" && i.type !== typeFilter) return false;
+    return true;
+  });
 
   useEffect(() => {
     if (mapInstanceRef.current) return;
@@ -79,7 +97,7 @@ export default function Map() {
     markersRef.current.forEach((m) => map.removeLayer(m));
     markersRef.current = [];
 
-    incidents.forEach((incident) => {
+    filtered.forEach((incident) => {
       const coords = STATE_COORDS[incident.state];
       if (!coords) return;
 
@@ -106,7 +124,7 @@ export default function Map() {
 
       markersRef.current.push(marker);
     });
-  }, [incidents]);
+  }, [filtered]);
 
   const violence = incidents.filter((i) => i.type === "violence").length;
   const misconduct = incidents.filter((i) => i.type === "misconduct").length;
@@ -151,10 +169,46 @@ export default function Map() {
 
       <div className="flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-6xl mx-auto">
+          {/* Filters */}
+          <div className="flex flex-wrap items-center gap-3 mb-5">
+            <select
+              value={stateFilter}
+              onChange={(e) => setStateFilter(e.target.value)}
+              className="bg-neutral-900/60 border border-neutral-700/60 text-neutral-300 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-emerald-500/50"
+            >
+              {STATES.map((s) => (
+                <option key={s} value={s}>{s === "All" ? "All States" : s}</option>
+              ))}
+            </select>
+            <div className="flex gap-1.5">
+              {TYPES.map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTypeFilter(t)}
+                  className={`text-xs px-3 py-1.5 rounded-xl border transition-all ${
+                    typeFilter === t
+                      ? "bg-emerald-600/20 border-emerald-500/40 text-emerald-400"
+                      : "bg-neutral-900/40 border-neutral-700/40 text-neutral-400 hover:border-neutral-500"
+                  }`}
+                >
+                  {t === "All" ? "All Types" : t.charAt(0).toUpperCase() + t.slice(1)}
+                </button>
+              ))}
+            </div>
+            {(stateFilter !== "All" || typeFilter !== "All") && (
+              <button
+                onClick={() => { setStateFilter("All"); setTypeFilter("All"); }}
+                className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+
           <div className="flex items-center gap-2 mb-5">
             <MapPin size={14} className="text-neutral-500" />
             <h2 className="text-sm font-medium text-neutral-300 uppercase tracking-wider">
-              Recent Incidents ({incidents.length})
+              Recent Incidents ({filtered.length})
             </h2>
           </div>
 
@@ -174,11 +228,17 @@ export default function Map() {
             </div>
           )}
 
-          {!loading && incidents.length > 0 && (
+          {!loading && filtered.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {incidents.map((incident, i) => (
+              {filtered.map((incident, i) => (
                 <IncidentCard key={i} incident={incident} />
               ))}
+            </div>
+          )}
+
+          {!loading && incidents.length > 0 && filtered.length === 0 && (
+            <div className="bg-neutral-900/30 border border-neutral-800/50 rounded-2xl p-12 text-center backdrop-blur-sm">
+              <p className="text-sm text-neutral-400">No incidents match the selected filters.</p>
             </div>
           )}
         </div>
