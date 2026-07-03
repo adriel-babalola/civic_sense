@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { LayoutDashboard, MapPin, Flag, MessageSquare, User, Settings, LogOut, Activity, Shield } from "lucide-react";
+import { LayoutDashboard, MapPin, Flag, MessageSquare, Activity, Shield, User, Settings, LogOut } from "lucide-react";
 
 const LINKS = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -36,6 +36,30 @@ export default function Sidebar({ open, onClose }) {
             </NavLink>
           ))}
         </nav>
+
+        {/* WhatsApp QR + Join Info */}
+        <div className="px-4 py-2">
+          <div className="bg-[#141414] rounded-lg border border-[#1E1E1E] p-2 space-y-1.5">
+            <p className="text-[10px] font-medium text-[#6B7280] uppercase tracking-wider text-center">
+              Try the Bot
+            </p>
+            <img
+              src="/image.png"
+              alt="WhatsApp QR"
+              className="w-full max-w-[130px] mx-auto rounded"
+            />
+            <p className="text-[10px] text-[#A1A1AA] text-center leading-snug">
+              Send to{" "}
+              <span className="text-white font-medium">+1 415 523 8886</span>
+            </p>
+            <div className="flex items-center justify-center gap-1 text-[10px]">
+              <span className="text-[#6B7280]">code</span>
+              <code className="px-1 py-0.5 bg-[#1E1E1E] rounded text-[#22C55E] font-mono">
+                join angle-building
+              </code>
+            </div>
+          </div>
+        </div>
 
         <div className="px-4 py-3 border-t border-[#1E1E1E]">
           <div className="bg-[#141414] rounded-lg border border-[#1E1E1E] p-3 space-y-2.5">

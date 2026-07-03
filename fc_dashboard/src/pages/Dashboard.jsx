@@ -16,6 +16,7 @@ import {
   Smartphone,
   Download,
   RefreshCw,
+  QrCode,
 } from "lucide-react";
 
 function computeActivity(items) {
