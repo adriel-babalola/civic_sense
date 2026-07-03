@@ -37,7 +37,7 @@ export default function Footer() {
             </a>
           </div>
         </div>
-        <div className="border-t border-neutral-900/80 mt-10 pt-6 text-center">
+        <div className="border-t border-neutral-900/80 -mb-6 mt-10 pt-6 text-center">
           <p className="text-xs text-neutral-500">&copy; {new Date().getFullYear()} CivicSense. All rights reserved.</p>
         </div>
       </div>
