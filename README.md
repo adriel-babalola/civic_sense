@@ -6,6 +6,27 @@ CivicSense is a real-time fact-checking bot that lives inside WhatsApp. No app d
 
 ---
 
+## Test the Bot (For Judges)
+
+Scan the QR code, or send a WhatsApp message to **+1 415 523 8886** with the code **`join angle-building`** to connect to the CivicSense sandbox.
+
+![WhatsApp QR](image.png)
+
+Once connected, send any of these test claims:
+
+| Claim | Expected Verdict |
+|---|---|
+| "Did Tinubu remove the fuel subsidy?" | **VERIFIED** |
+| "Is petrol 200 naira per litre?" | **FALSE** |
+| "Did Nigeria's debt exceed 100 trillion?" | **VERIFIED** |
+| "Is minimum wage now 70k?" | **VERIFIED** |
+| "Did Peter Obi win Lagos in 2023?" | **VERIFIED** |
+| "Did INEC declare Tinubu winner of 2023 election?" | **VERIFIED** |
+
+The bot replies within 20 seconds with a structured verdict, evidence, and sources. Try it on the spot — no app download, no sign-up required.
+
+---
+
 ## The Demo (3 Minutes for Judges)
 
 | Step | What Happens |
