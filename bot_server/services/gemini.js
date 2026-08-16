@@ -9,7 +9,7 @@ const KB_PATH = path.join(__dirname, "..", "data", "civic_kb.json");
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const MODEL = process.env.LLM_MODEL || "google/gemini-2.5-flash";
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 25000;
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 12000;
 
 function normalizeClaim(claim) {
   return claim.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();

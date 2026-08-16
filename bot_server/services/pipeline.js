@@ -6,7 +6,7 @@ import {
   buildVerdict,
 } from "./gemini.js";
 
-const DEADLINE_MS = Number(process.env.PIPELINE_DEADLINE_MS) || 25000;
+const DEADLINE_MS = Number(process.env.PIPELINE_DEADLINE_MS) || 14000;
 
 export async function runFactCheck({ claim, imageDataUrl, caption }) {
   const started = Date.now();
