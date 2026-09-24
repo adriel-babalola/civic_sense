@@ -27,13 +27,20 @@ import {
   sendChatAction,
   sendMessage,
 } from "./services/telegram.js";
+import {
+  handleVerification,
+  verifySignature,
+  extractMessage as extractMetaMessage,
+  sendTextMessage as sendMetaTextMessage,
+  downloadMedia as downloadMetaMedia,
+} from "./services/metaWhatsapp.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
 
 const app = express();
 app.use(compression());
 app.use(cors());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.json({ limit: "10mb" }));
+app.use(express.json({ limit: "10mb", verify: (req, res, buf) => { req.rawBody = buf; } }));
 
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
 const upload = multer({
@@ -169,6 +176,71 @@ app.post("/api/chat", async (req, res) => {
     console.error("Chat error:", err);
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+app.get("/webhook/meta", (req, res) => {
+  const challenge = handleVerification(req);
+  if (challenge === null) {
+    return res.status(403).send("Verification failed");
+  }
+  res.type("text/plain").send(challenge);
+});
+
+app.post("/webhook/meta", async (req, res) => {
+  try {
+    verifySignature(req);
+  } catch (err) {
+    console.error(`[Meta] Signature verification failed: ${err.message}`);
+    return res.status(401).send("Invalid signature");
+  }
+
+  const message = extractMetaMessage(req.body);
+  if (!message) {
+    return res.send("ok");
+  }
+
+  console.log(
+    `[Meta] Incoming from ${message.from}: "${message.text || ""}" image=${message.imageId ? "yes" : "no"}`
+  );
+
+  res.send("ok");
+
+  setImmediate(async () => {
+    try {
+      let imageDataUrl = null;
+      if (message.imageId) {
+        const media = await downloadMetaMedia(message.imageId);
+        if (media) imageDataUrl = media.dataUrl;
+      }
+
+      const result = await runFactCheck({
+        claim: message.text,
+        imageDataUrl,
+        caption: message.caption || message.text,
+      });
+
+      await saveFactCheck({
+        claim: result.claim || message.text,
+        verdict: result.verdict,
+        channel: "whatsapp",
+        hashedFrom: message.from,
+        timestamp: new Date(),
+      }).catch((err) => console.error("DB save error:", err.message));
+
+      await sendMetaTextMessage(message.from, result.verdict);
+      console.log(`[Meta] Reply sent to ${message.from}`);
+    } catch (err) {
+      console.error("Meta webhook async error:", err);
+      try {
+        await sendMetaTextMessage(
+          message.from,
+          "Sorry, I couldn't process that. Please try again with a text claim."
+        );
+      } catch (sendErr) {
+        console.error("Failed to send error reply:", sendErr.message);
+      }
+    }
+  });
 });
 
 app.post("/webhook", async (req, res) => {

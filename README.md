@@ -188,6 +188,8 @@ civic_sense/
 |--------|------|-------------|
 | `GET` | `/` | Health check |
 | `GET` | `/api/health` | DB + article count + scraper status |
+| `GET` | `/webhook/meta` | Meta WhatsApp webhook verification (hub.challenge) |
+| `POST` | `/webhook/meta` | Meta WhatsApp Cloud API webhook (text + image, signature-verified) |
 | `POST` | `/webhook` | Twilio WhatsApp webhook (text + image) |
 | `POST` | `/webhook/telegram` | Telegram Bot webhook (text + photo, verified via secret token) |
 | `POST` | `/api/factcheck` | Single endpoint: post claim and/or image, get verdict (multipart or JSON) |
@@ -286,6 +288,10 @@ npm run dev            # Local: http://localhost:5174
 | `TWILIO_ACCOUNT_SID` | Twilio account SID |
 | `TWILIO_AUTH_TOKEN` | Twilio auth token |
 | `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp number |
+| `META_WHATSAPP_TOKEN` | Meta WhatsApp permanent System User access token |
+| `META_WHATSAPP_PHONE_NUMBER_ID` | WABA phone number ID for the `/messages` endpoint |
+| `META_WEBHOOK_VERIFY_TOKEN` | Webhook verify token (register in Meta App Dashboard) |
+| `META_APP_SECRET` | Meta App secret for `X-Hub-Signature-256` verification |
 | `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather |
 | `TELEGRAM_WEBHOOK_SECRET` | Secret for Telegram webhook verification |
 | `PORT` | Server port (default: 3000) |

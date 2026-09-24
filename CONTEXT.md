@@ -122,6 +122,12 @@ TWILIO_WHATSAPP_NUMBER=
 MONGODB_URI=
 PORT=3000
 
+Meta WhatsApp (replaces Twilio once provisioned — see .env.example):
+META_WHATSAPP_TOKEN=
+META_WHATSAPP_PHONE_NUMBER_ID=
+META_WEBHOOK_VERIFY_TOKEN=
+META_APP_SECRET=
+
 Optional tuning: SCRAPE_INTERVAL_MIN, ARTICLE_TTL_DAYS, SCRAPE_SECRET,
 MEDIA_MAX_MB, CACHE_TTL_SEC, CACHE_MAX_ENTRIES, RATE_LIMIT_MAX.
 Telegram: TELEGRAM_BOT_TOKEN (from @BotFather), TELEGRAM_WEBHOOK_SECRET.
@@ -137,7 +143,7 @@ Never commit .env to GitHub.
 - AI: Gemini 2.5 Flash via OpenRouter (LLM_MODEL)
 - Web search: Tavily API (16 Nigerian domains)
 - Database: MongoDB Atlas (free tier) — FactCheck, Article, Report collections
-- WhatsApp Gateway: Twilio WhatsApp Sandbox
+- WhatsApp Gateway: Twilio WhatsApp Sandbox (Meta WhatsApp Cloud API integration in progress)
 - Scraper: rss-parser targeting 17 NG RSS feeds (30-min sync, 14-day TTL)
 - Cache: bounded LRU for verdicts
 - Dashboard: React + Tailwind deployed on Vercel
