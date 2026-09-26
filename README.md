@@ -135,9 +135,20 @@ civic_sense/
 │   ├── index.html
 │   └── vite.config.js
 │
+├── website/                          # Public site (Next.js 15, App Router, Tailwind v4)
+│   ├── src/app/                       # Site pages + new feature pages
+│   │   ├── page.tsx                   # Home: hero, how-it-works, sources, team, CTA
+│   │   ├── layout.tsx
+│   │   └── globals.css
+│   ├── src/components/                # about, hero, how-it-works, team, sources-ticker, ...
+│   ├── src/config/site-config.ts
+│   ├── next.config.ts
+│   └── package.json
+│
 ├── documentation/                     # Supplementary docs
 │   ├── API.md                          # Bot server API reference (all endpoints)
 │   ├── CONTEXT.md                      # Original project brief (internal)
+│   ├── CONTEXT_v2.md                   # Platform roadmap: 3 features, 4-month sprint
 │   └── script.md                       # Judge demo script (internal)
 └── README.md                          # This file
 ```
