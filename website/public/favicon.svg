@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+  <title>CivicSense</title>
+  <!-- Same shield and tick as LogoMark, on a filled background so the mark
+       survives a browser tab at 16px where a hairline stroke disappears. -->
+  <rect width="24" height="24" rx="5" fill="#0a0a0a" />
+  <path
+    d="M12 4.2 6.1 6.4v4.8c0 3.6 2.43 6.45 5.9 7.62 3.47-1.17 5.9-4.02 5.9-7.62V6.4L12 4.2Z"
+    fill="none"
+    stroke="#2ecc71"
+    stroke-width="1.7"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+  <path
+    d="m9.35 11.75 1.9 1.95 3.55-3.85"
+    fill="none"
+    stroke="#2ecc71"
+    stroke-width="1.9"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+</svg>

@@ -1,0 +1,512 @@
+@import "tailwindcss";
+@import "./variables.css";
+@import "./animations.css";
+
+/* ---------------------------------------------------------------------------
+ * Theme
+ * `dark` is pinned: the product has one surface treatment and no light mode.
+ * ------------------------------------------------------------------------ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Surfaces */
+  --color-sunken: var(--cs-surface-sunken);
+  --color-surface: var(--cs-surface);
+  --color-raised: var(--cs-surface-raised);
+  --color-card: var(--cs-card);
+  --color-card-hover: var(--cs-card-hover);
+  --color-card-active: var(--cs-card-active);
+
+  /* Hairlines */
+  --color-line-subtle: var(--cs-border-subtle);
+  --color-line: var(--cs-border);
+  --color-line-strong: var(--cs-border-strong);
+
+  /* Foreground */
+  --color-fg: var(--cs-fg);
+  --color-fg-secondary: var(--cs-fg-secondary);
+  --color-fg-muted: var(--cs-fg-muted);
+  --color-fg-faint: var(--cs-fg-faint);
+
+  /* Aliases retained from the dashboard design system */
+  --color-primary: var(--cs-fg);
+  --color-secondary: var(--cs-fg-secondary);
+  --color-muted: var(--cs-fg-muted);
+  --color-card-border: var(--cs-border);
+
+  /* Brand */
+  --color-brand: var(--cs-brand);
+  --color-brand-bright: var(--cs-brand-bright);
+  --color-brand-dim: var(--cs-brand-dim);
+
+  /* Signal */
+  --color-live: var(--cs-live);
+  --color-verified: var(--cs-verified);
+  --color-false: var(--cs-false);
+  --color-misleading: var(--cs-misleading);
+  --color-unverified: var(--cs-unverified);
+  --color-unrest: var(--cs-unrest);
+  --color-violence: var(--cs-false);
+  --color-misconduct: var(--cs-misleading);
+
+  /* Typography */
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system,
+    "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, monospace;
+
+  --text-2xs: 0.6875rem;
+  --text-2xs--line-height: 1rem;
+
+  /* Display sizes are fluid so headlines scale with the viewport instead of
+   * jumping at breakpoints. */
+  --text-display--font-size: clamp(2.125rem, 1.45rem + 3vw, 3.75rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 700;
+
+  --text-title--font-size: clamp(1.5rem, 1.2rem + 1.5vw, 2.25rem);
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: -0.03em;
+  --text-title--font-weight: 700;
+
+  --text-heading--font-size: clamp(1.1875rem, 1.05rem + 0.6vw, 1.4375rem);
+  --text-heading--line-height: 1.2;
+  --text-heading--letter-spacing: -0.02em;
+  --text-heading--font-weight: 600;
+
+  --text-section-label: 0.6875rem;
+  --text-section-label--line-height: 1rem;
+  --text-section-label--letter-spacing: 0.09em;
+  --text-section-label--font-weight: 600;
+
+  /* Radii. Cards are 10px, controls 8px, pills full. Nothing is pill-shaped
+   * unless it is a chip. */
+  --radius-card: 0.625rem;
+  --radius-control: 0.5rem;
+
+  /* Elevation. On near-black, shadows only ever add a top edge highlight and
+   * a soft floor to separate layers. */
+  --shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.03);
+  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 0 rgb(255 255 255 / 0.04);
+  --shadow-overlay: 0 24px 48px -12px rgb(0 0 0 / 0.7), 0 0 0 1px var(--cs-border);
+  --shadow-popover: 0 16px 40px -8px rgb(0 0 0 / 0.6), 0 0 0 1px var(--cs-border);
+
+  --ease-out-quart: var(--cs-ease-out);
+  --ease-in-out-cubic: var(--cs-ease-in-out);
+
+  --animate-fade-in: cs-fade-in var(--cs-duration-slow) var(--cs-ease-out) both;
+  --animate-marquee: cs-marquee 48s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-line);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    scroll-padding-top: 5rem;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    font-variant-numeric: tabular-nums;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Headings opt into the fluid type scale rather than inheriting browser
+   * defaults, so every page shares one hierarchy. */
+  h1,
+  h2,
+  h3,
+  h4 {
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    font-size: var(--text-display);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+  }
+
+  h2 {
+    font-size: var(--text-title);
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-weight: 700;
+  }
+
+  h3 {
+    font-size: var(--text-heading);
+    line-height: 1.2;
+    font-weight: 600;
+  }
+
+  h4 {
+    font-size: 0.9375rem;
+    line-height: 1.35;
+    font-weight: 600;
+  }
+
+  p {
+    color: var(--color-fg-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.65;
+    text-wrap: pretty;
+  }
+
+  /* Long-form copy (privacy, FAQ answers) gets a comfortable measure. */
+  .cs-prose {
+    max-width: 68ch;
+  }
+  .cs-prose p {
+    color: var(--color-fg-secondary);
+  }
+  .cs-prose strong {
+    color: var(--color-fg);
+    font-weight: 600;
+  }
+
+  ::selection {
+    background: rgb(46 204 113 / 0.24);
+    color: var(--color-fg);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--cs-focus);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  button,
+  [role="button"] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  input,
+  textarea,
+  select {
+    font: inherit;
+    color: inherit;
+  }
+
+  /* Native autofill paints an opaque light background that breaks the theme. */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill {
+    -webkit-text-fill-color: var(--color-fg);
+    -webkit-box-shadow: 0 0 0 1000px var(--color-card) inset;
+    caret-color: var(--color-fg);
+  }
+
+  /* Scrollbars: thin, low contrast, present but not loud. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--color-surface);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--cs-border-strong);
+    border-radius: 4px;
+    border: 2px solid var(--color-surface);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #3f3f46;
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--cs-border-strong) var(--color-surface);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Components
+ * Reusable recipes. Prefer these over one-off class strings so spacing and
+ * interaction stay identical everywhere.
+ * ------------------------------------------------------------------------ */
+@layer components {
+  /* Standard page container. 1200px with 20px gutters on mobile. */
+  /* 82rem rather than 75rem, and lighter gutters.
+     At 1440px the old values left 120px of dead space either side of the
+     content while the text inside it stayed line-length limited anyway, so the
+     extra width cost nothing and bought a less boxed-in feel. */
+  .cs-container {
+    width: 100%;
+    max-width: 82rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .cs-container {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .cs-container {
+      padding-inline: 2rem;
+    }
+  }
+
+  /* Reading-width container for prose pages. */
+  .cs-container-prose {
+    width: 100%;
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-inline: 1.25rem;
+  }
+
+  /* ---- Buttons ---------------------------------------------------------- */
+  .cs-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    white-space: nowrap;
+    border-radius: var(--radius-control);
+    transition:
+      background-color var(--cs-duration) var(--cs-ease-out),
+      border-color var(--cs-duration) var(--cs-ease-out),
+      color var(--cs-duration) var(--cs-ease-out),
+      opacity var(--cs-duration) var(--cs-ease-out);
+  }
+  .cs-btn:disabled {
+    opacity: 0.45;
+  }
+
+  .cs-btn-md {
+    padding: 0.5625rem 1rem;
+  }
+  .cs-btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+  .cs-btn-lg {
+    padding: 0.75rem 1.375rem;
+    font-size: 0.9375rem;
+  }
+
+  .cs-btn-primary {
+    background: var(--cs-brand);
+    color: #fff;
+    border: 1px solid transparent;
+  }
+  .cs-btn-primary:hover:not(:disabled) {
+    background: var(--cs-brand-bright);
+    color: #04140b;
+  }
+
+  /* Lime CTA. Used on the hero, where the button has to read as the single
+     brightest thing on the photograph. Hover brightens rather than swapping to
+     another colour, so the accent holds its identity on hover. */
+  .cs-btn-accent {
+    background: var(--cs-brand-bright);
+    color: #04140b;
+    border: 1px solid transparent;
+  }
+  .cs-btn-accent:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
+
+  .cs-btn-secondary {
+    background: var(--cs-card);
+    color: var(--color-fg);
+    border: 1px solid var(--cs-border);
+  }
+  .cs-btn-secondary:hover:not(:disabled) {
+    background: var(--cs-card-hover);
+    border-color: var(--cs-border-strong);
+  }
+
+  .cs-btn-ghost {
+    background: transparent;
+    color: var(--color-fg-secondary);
+    border: 1px solid transparent;
+  }
+  .cs-btn-ghost:hover:not(:disabled) {
+    background: rgb(255 255 255 / 0.04);
+    color: var(--color-fg);
+  }
+
+  .cs-btn-danger {
+    background: transparent;
+    color: var(--cs-false);
+    border: 1px solid rgb(239 68 68 / 0.28);
+  }
+  .cs-btn-danger:hover:not(:disabled) {
+    background: rgb(239 68 68 / 0.1);
+    border-color: rgb(239 68 68 / 0.5);
+  }
+
+  /* ---- Surfaces --------------------------------------------------------- */
+  .cs-card {
+    background: var(--cs-card);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-card);
+  }
+  .cs-card-interactive {
+    transition:
+      background-color var(--cs-duration) var(--cs-ease-out),
+      border-color var(--cs-duration) var(--cs-ease-out),
+      transform var(--cs-duration) var(--cs-ease-out);
+  }
+  .cs-card-interactive:hover {
+    background: var(--cs-card-hover);
+    border-color: var(--cs-border-strong);
+  }
+
+  /* ---- Form controls ---------------------------------------------------- */
+  .cs-field {
+    width: 100%;
+    background: var(--cs-surface);
+    border: 1px solid var(--cs-border);
+    border-radius: var(--radius-control);
+    padding: 0.5625rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--color-fg);
+    transition:
+      border-color var(--cs-duration) var(--cs-ease-out),
+      background-color var(--cs-duration) var(--cs-ease-out);
+  }
+  .cs-field::placeholder {
+    color: var(--cs-fg-faint);
+  }
+  .cs-field:hover:not(:disabled) {
+    border-color: var(--cs-border-strong);
+  }
+  .cs-field:focus {
+    outline: none;
+    border-color: var(--cs-brand-bright);
+    background: var(--cs-surface-raised);
+  }
+  .cs-field:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .cs-field[aria-invalid="true"] {
+    border-color: var(--cs-false);
+  }
+  .cs-field[aria-invalid="true"]:focus {
+    border-color: var(--cs-false);
+  }
+
+  /* Native select needs an explicit chevron and transparent border. */
+  .cs-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    padding-right: 2rem;
+  }
+
+  /* ---- Layout helpers --------------------------------------------------- */
+  .cs-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-fg);
+    margin-bottom: 0.375rem;
+  }
+  .cs-hint {
+    font-size: 0.75rem;
+    color: var(--cs-fg-muted);
+    line-height: 1.45;
+  }
+  .cs-error-text {
+    font-size: 0.75rem;
+    color: var(--cs-false);
+    line-height: 1.45;
+  }
+  .cs-eyebrow {
+    font-size: var(--text-section-label);
+    line-height: 1rem;
+    letter-spacing: 0.09em;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--cs-fg-muted);
+  }
+
+  /* Skip link for keyboard and screen-reader users. */
+  .cs-skip-link {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+    z-index: 100;
+    transform: translateY(-200%);
+    background: var(--cs-brand-bright);
+    color: #04140b;
+    padding: 0.5rem 0.875rem;
+    border-radius: var(--radius-control);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: transform var(--cs-duration) var(--cs-ease-out);
+  }
+  .cs-skip-link:focus {
+    transform: translateY(0);
+  }
+
+  /* Visually hidden but available to assistive tech. */
+  .cs-sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  /* Hairline grid used behind hero and CTA sections. Reads as texture at
+   * 4% opacity, invisible when you look for it. */
+  .cs-grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--cs-border) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--cs-border) 1px, transparent 1px);
+    background-size: 64px 64px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Leaflet overrides
+ *
+ * There is no tile layer — see components/map/IncidentMap.jsx for why. What is
+ * left to re-skin is the container and the div-icon markers.
+ * ------------------------------------------------------------------------ */
+.leaflet-container {
+  background: var(--cs-surface-sunken) !important;
+  font-family: var(--font-sans) !important;
+  outline: none;
+}
+
+.leaflet-div-icon {
+  background: transparent !important;
+  border: none !important;
+}

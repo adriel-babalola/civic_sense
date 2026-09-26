@@ -1,7 +1,7 @@
 # CivicSense Kratos — Bot Server API
 
 REST + webhook API for the Kratos civic fact-checking bot.
-Source: `bot_server/server.js` (Express 4, ESM, Node).
+Source: `server/server.js` (Express 4, ESM, Node).
 
 - **Base URL (local):** `http://localhost:3000`
 - **Content type:** all endpoints accept `application/json` and `application/x-www-form-urlencoded` (`express.json` limit `10mb`, `express.urlencoded` extended).
@@ -335,7 +335,26 @@ Submit a civic-incident report. New reports start as `pending`.
 | `description` | string | **yes** | free text |
 | `state` | string | **yes** | Nigerian state |
 | `lga` | string | **yes** | Local government area |
-| `evidence` | string | no | URL or text |
+| `evidence` | string | no | URL or free text, up to 500 characters from the website form |
+
+> **`evidence` is a string field, not an upload.** `Report.evidence` is a
+> Mongoose `String`, so a `File` sent here serialises to `"{}"` and is stored as
+> two meaningless characters. The website's report form therefore offers a text
+> box and directs screenshots to the WhatsApp bot, where `/api/factcheck`
+> genuinely accepts an image. Adding report image evidence means adding
+> multipart handling, storage, a retention window and moderator access, and
+> changing this policy — not just adding a file input.
+
+## Authentication status
+
+**The report and moderation endpoints are unauthenticated.** Anyone who can
+reach this server can read every submitted report and approve or reject any of
+them. The website's admin console is gated by a client-side password, which is a
+user-interface affordance and not a control.
+
+This is the highest-priority gap in the system. Until it is closed, do not run
+this server on a public hostname with a real `MONGODB_URI` pointing at
+production data. Anyone who finds the URL can publish or bury a report.
 
 **Response 200**
 
@@ -504,9 +523,27 @@ A single terminal error middleware (server.js:358-364):
 | `CACHE_TTL_SEC` | `3600` | Verdict cache TTL |
 | `CACHE_MAX_ENTRIES` | `300` | Verdict cache size |
 
-**Dependencies** (`bot_server/package.json`, v1.0.0, `"type": "module"`): `express ^4.21.0`, `mongoose ^8.0.0`, `twilio ^5.4.0`, `multer ^2.2.0`, `express-rate-limit ^8.6.2`, `cors ^2.8.5`, `compression ^1.8.1`, `dotenv ^16.0.0`, `axios ^1.6.0`, `rss-parser ^3.13.0`. No `engines` field declared.
+**Dependencies** (`server/package.json`, v1.0.0, `"type": "module"`): `express ^4.21.0`, `mongoose ^8.0.0`, `twilio ^5.4.0`, `multer ^2.2.0`, `express-rate-limit ^8.6.2`, `cors ^2.8.5`, `compression ^1.8.1`, `dotenv ^16.0.0`, `axios ^1.6.0`, `rss-parser ^3.13.0`. No `engines` field declared.
 
 **Scripts:** `npm start` (`node server.js`), `npm test`, `npm run test:pipeline`, `npm run verify:feeds`, `npm run setup:telegram`.
+
+## Client-side data (no endpoint)
+
+Not everything on the site comes from this API. The politician directory is a
+bundled dataset with no read or write endpoint of any kind:
+
+- `website/src/data/elections2027.js` holds the 18 presidential tickets
+  INEC certified, transcribed from the commission's final list published
+  12 September 2026.
+- `website/src/data/politicians.js` generates the 36 profiles (18 candidates,
+  18 running mates) from that list, plus each candidate's running-mate or
+  presidential-candidate link.
+- `website/src/data/photos.js` resolves portrait assets and carries the author,
+  licence and source URL for each, rendered in a profile caption and in full on
+  `/credits`.
+
+There is no CRUD route for any of it, which is why the dataset needs a code
+change to update and why nothing in it can be edited by anyone who finds the API.
 
 ## Data models
 

@@ -1,340 +1,223 @@
-# CivicSense — WhatsApp AI Fact-Checking Bot for Nigerians
+# CivicSense
 
-> **Send a rumour to WhatsApp. Get the truth back.**
+> **Truth awareness, so every decision is an informed one.**
 
-CivicSense is a real-time fact-checking bot that lives inside WhatsApp. No app download. No sign-up. Any Nigerian can forward a political rumour, claim, or headline to our WhatsApp number and receive a structured, sourced verdict within 20 seconds.
+CivicSense is a truth awareness and civic sensitisation platform for Nigeria. The
+work is youth and mass sensitisation: helping young Nigerians and the wider
+public check what reaches them before they believe it, and reach decisions they
+can stand behind.
 
----
+Checking individual claims is how that gets done, not the whole point of it. A
+fact-checker answers one question about one claim; what decides an election is a
+habit, whether people pause before they forward. So the claim-checking pipeline
+is the tool here and truth awareness is the goal.
 
-## Test the Bot (For Judges)
+It runs where the claims are: a WhatsApp and Telegram bot, a public website, and
+an internal moderation console. A claim sent as text or as a screenshot comes
+back labelled VERIFIED, FALSE, MISLEADING or UNVERIFIED, with the sources it was
+read from, so the reader can judge the evidence rather than take our word for it.
 
-Scan the QR code, or send a WhatsApp message to **+1 415 523 8886** with the code **`join angle-building`** to connect to the CivicSense sandbox.
-
-![WhatsApp QR](image.png)
-
-Once connected, send any of these test claims:
-
-| Claim | Expected Verdict |
-|---|---|
-| "Did Tinubu remove the fuel subsidy?" | **VERIFIED** |
-| "Is petrol 200 naira per litre?" | **FALSE** |
-| "Did Nigeria's debt exceed 100 trillion?" | **VERIFIED** |
-| "Is minimum wage now 70k?" | **VERIFIED** |
-| "Did Peter Obi win Lagos in 2023?" | **VERIFIED** |
-| "Did INEC declare Tinubu winner of 2023 election?" | **VERIFIED** |
-
-The bot replies within 20 seconds with a structured verdict, evidence, and sources. Try it on the spot — no app download, no sign-up required.
+This repository is a monorepo. The website and the bot are separate
+deployments that share one API.
 
 ---
 
-## The Demo (3 Minutes for Judges)
+## Repository layout
 
-| Step | What Happens |
-|------|-------------|
-| **1.** Hand judge the phone with WhatsApp open | Bot is already connected via Twilio Sandbox |
-| **2.** Judge types any claim — e.g. *"Did Tinubu remove the fuel subsidy?"* | ... |
-| **3.** Bot replies in ~15s with verdict: `VERIFIED` + evidence + source link | Pipeline: Tavily search → KB lookup → Gemini 2.5 Flash → reply |
-| **4.** Show the **public website** — see every verified incident on a live Leaflet map of Nigeria | Color-coded by type: red (violence), amber (misconduct), orange (unrest) |
-| **5.** Show the **admin dashboard** — live feed, 7-day chart, trending claims, source breakdown, export CSV | Chat UI, approve/reject reports, Conflict Tracker beta |
-| **6.** Close: *"Three civic tools. One WhatsApp number. No app. No sign-up. Any Nigerian can use this right now."* | |
+| Path | What it is | Stack | Deploy to |
+|---|---|---|---|
+| `website/` | Public site and admin console | React 19, Vite, Tailwind 4, React Router, Leaflet | Vercel, Netlify, any static host |
+| `server/` | Bot and API. Twilio, Telegram, fact-check pipeline, moderation queue, RSS scraper | Node, Express, Mongoose, Gemini, Tavily | Railway, Render, Fly, a VPS |
+| `civic_sense_v1/cs_website/` | Earlier Next.js prototype, kept for reference | Next.js | Not deployed |
+| `civic_sense_v1/fc_dashboard/` | Earlier dashboard prototype. The website's visual language is derived from it | React | Not deployed |
+| `documentation/` | Architecture notes, API reference, planning context | Markdown | — |
 
----
-
-## Architecture
-
-```
-WhatsApp User ──→ Twilio ──→ Express Server (server.js)
-                                  │
-          ┌──────────────┬────────┼────────────┬─────────────┐
-          ▼              ▼        ▼            ▼             ▼
-    RSS Scraper      Tavily    civic_kb.json  Gemini 2.5   MongoDB
-    (17 NG feeds,    (live     (25 curated    Flash via    (article
-     30-min sync)    search)   civic facts)   OpenRouter)  index)
-          │              │        │            │
-          └──────────────┴────────┼────────────┘
-                                  ▼
-                          Formatted Verdict
-                          (text + structured
-                           JSON, sources[])
-                                  │
-                     ┌────────────┼────────────┐
-                     ▼            ▼            ▼
-                Twilio Reply   MongoDB      2 React SPAs
-                (WhatsApp)   (persistence)  (Dashboard + Website)
-```
-
-### Data Flow (<8s typical, <15s p95)
-
-1. User sends a text claim and/or an image to `/api/factcheck` or the Twilio `/webhook`
-2. If an image is sent, Gemini vision extracts the claim (image is analyzed only, never stored)
-3. Retrieval runs in **parallel**: civic_kb.json keyword match + MongoDB article index (RSS) + Tavily live search
-4. All evidence goes into a **single Gemini 2.5 Flash call** → structured verdict (JSON) + formatted WhatsApp reply
-5. Verdict logged to MongoDB (dashboard reads from here), replied to the user
+`website/` is the current front end. The two folders under `civic_sense_v1/` are
+superseded and are not part of any build.
 
 ---
 
-## Project Structure
+## Quick start
 
-```
-civic_sense/
-├── bot_server/                        # WhatsApp bot + AI pipeline (Express)
-│   ├── server.js                      # Webhook + REST API (single /api/factcheck endpoint)
-│   ├── scripts/
-│   │   └── verify-feeds.js            # Checks all 17 RSS feeds (npm run verify:feeds)
-│   ├── services/
-│   │   ├── pipeline.js                # Orchestrator: parallel retrieval + single LLM call
-│   │   ├── gemini.js                  # Gemini RAG + vision claim extraction + LRU cache
-│   │   ├── scraper.js                 # RSS sync (17 NG feeds) into Mongo article index
-│   │   ├── newsSources.js             # Registry: 17 NG news + fact-check sources
-│   │   ├── search.js                  # Tavily live search (16 Nigerian domains)
-│   │   ├── cache.js                   # Bounded LRU cache (TTL + max entries)
-│   │   ├── image.js                   # Image validation/decoding only (never stored)
-│   │   └── db.js                      # MongoDB: FactCheck + Article + Report schemas
-│   ├── data/
-│   │   └── civic_kb.json              # 25 curated Nigerian civic facts
-│   ├── test/
-│   │   ├── testKratos.js              # 12 parallel live claims (npm test)
-│   │   └── testPipeline.js            # End-to-end: server, image, scraper (npm run test:pipeline)
-│   └── package.json
-│
-├── fc_dashboard/                      # Admin dashboard (React 19 + Vite 6)
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx          # Live feed, 7-day chart, stats, trends, CSV export
-│   │   │   ├── Chat.jsx               # Interactive fact-check UI (like WhatsApp in browser)
-│   │   │   ├── ConflictTracker.jsx    # RSS-simulated incident feed with filter/delete/reset
-│   │   │   └── Reports.jsx            # Admin approve/reject workflow
-│   │   ├── components/
-│   │   │   ├── FactCheckCard.jsx      # Verdict card with badge, evidence, source pills
-│   │   │   ├── FactCheckModal.jsx     # Submit claim modal
-│   │   │   ├── Sidebar.jsx            # Navigation + QR code + bot status
-│   │   │   ├── SkeletonCard.jsx       # Loading shimmer
-│   │   │   └── StatsRow.jsx           # 5 verdict stat counters
-│   │   ├── utils/
-│   │   │   └── parseVerdict.js        # Regex parser for verdict format
-│   │   ├── App.jsx                    # BrowserRouter + 4 routes
-│   │   └── config.js                  # API_BASE + WHATSAPP_NUMBER
-│   ├── index.html
-│   ├── vite.config.js
-│   └── vercel.json
-│
-├── cs_website/                        # Public website (React 19 + Vite 6)
-│   ├── src/
-│   │   ├── pages/
-│   │   │   ├── Home.jsx               # Bento-grid hero + 3 feature cards
-│   │   │   ├── Report.jsx             # Anonymous incident report form
-│   │   │   └── Map.jsx                # Leaflet map + color-coded markers + live feed
-│   │   ├── components/
-│   │   │   ├── Navbar.jsx             # Fixed glassmorphism header
-│   │   │   ├── Footer.jsx             # 3-column footer
-│   │   │   └── IncidentCard.jsx       # Incident card with type badge
-│   │   ├── api/
-│   │   │   └── client.js              # submitReport, fetchIncidents
-│   │   ├── App.jsx                    # BrowserRouter + 3 routes
-│   │   └── main.jsx
-│   ├── index.html
-│   └── vite.config.js
-│
-├── website/                          # Public site (Next.js 15, App Router, Tailwind v4)
-│   ├── src/app/                       # Site pages + new feature pages
-│   │   ├── page.tsx                   # Home: hero, how-it-works, sources, team, CTA
-│   │   ├── layout.tsx
-│   │   └── globals.css
-│   ├── src/components/                # about, hero, how-it-works, team, sources-ticker, ...
-│   ├── src/config/site-config.ts
-│   ├── next.config.ts
-│   └── package.json
-│
-├── documentation/                     # Supplementary docs
-│   ├── API.md                          # Bot server API reference (all endpoints)
-│   ├── CONTEXT.md                      # Original project brief (internal)
-│   ├── CONTEXT_v2.md                   # Platform roadmap: 3 features, 4-month sprint
-│   └── script.md                       # Judge demo script (internal)
-└── README.md                          # This file
-```
-
----
-
-## Features
-
-| Feature | Status |
-|---------|--------|
-| **WhatsApp Fact-Checking** — Twilio webhook → AI pipeline → instant reply (incl. image claims) | ✅ Live |
-| **Telegram Fact-Checking** — BotFather bot, same pipeline (text + photo claims) | ✅ Live |
-| **Live News Search** — Tavily API queries 16 major Nigerian news domains | ✅ Live |
-| **RSS Article Index** — 17 Nigerian feeds (news + IFCN fact-checkers) synced every 30 min into MongoDB | ✅ Live |
-| **Image Claim Extraction** — send a screenshot/poster, bot reads the claim (analyzed only, never stored) | ✅ Live |
-| **Civic Knowledge Base** — 25 curated entries (fuel subsidy, elections, CBN, security, education) | ✅ Live |
-| **Fact-Check Dashboard** — Real-time feed, 7-day chart, stats, trending, CSV export | ✅ Live |
-| **Interactive Chat UI** — Web fact-check interface (mirrors WhatsApp bot) | ✅ Live |
-| **MongoDB Persistence** — All verdicts logged with timestamps and channel metadata | ✅ Live |
-| **Anonymous Reporting** — Submit reports (violence/misconduct/unrest) → admin approve/reject → public map | ✅ Live |
-| **Public Incident Map** — Leaflet map of Nigeria with 36-state coordinates + color-coded markers | ✅ Live |
-| **Public Website** — Landing page, report form, incident map | ✅ Live |
-| **Conflict Tracker** — Incident feed with type filter, delete, and reset | 🔄 Beta |
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Node.js |
-| Framework | Express 4 |
-| AI Model | Gemini 2.5 Flash (via OpenRouter) |
-| Web Search | Tavily API (Nigerian domain-scoped) |
-| Database | MongoDB Atlas (free tier) |
-| WhatsApp | Twilio Sandbox |
-| Dashboard | React 19 + React Router 7 + Vite 6 |
-| Website | React 19 + React Router 7 + Vite 6 |
-| Maps | Leaflet (standalone, no wrapper) |
-| Icons | Lucide React |
-| Styling | Tailwind CSS v4 |
-| Deploy (Bot) | Railway |
-| Deploy (Frontends) | Vercel |
-
----
-
-## API Endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/` | Health check |
-| `GET` | `/api/health` | DB + article count + scraper status |
-| `POST` | `/webhook` | Twilio WhatsApp webhook (text + image) |
-| `POST` | `/webhook/telegram` | Telegram Bot webhook (text + photo, verified via secret token) |
-| `POST` | `/api/factcheck` | Single endpoint: post claim and/or image, get verdict (multipart or JSON) |
-| `POST` | `/api/chat` | Submit claim for fact-checking (JSON, dashboard-compatible) |
-| `GET` | `/api/factchecks` | Get recent fact-checks (50 items) |
-| `POST` | `/api/scrape` | Trigger RSS sync (requires `?secret=` from `SCRAPE_SECRET`) |
-| `GET` | `/api/sources` | List configured news sources |
-| `POST` | `/api/reports` | Submit anonymous report |
-| `GET` | `/api/reports` | Get all reports (admin) |
-| `PATCH` | `/api/reports/:id/approve` | Approve report → appears on public map |
-| `PATCH` | `/api/reports/:id/reject` | Reject report |
-| `GET` | `/api/incidents` | Get approved reports + seed data |
-
-### Example: POST /api/factcheck
-
-Multipart form-data (`image` file, optional `claim`, optional `caption`) **or** JSON:
-
-```json
-// Request
-{ "claim": "Did Tinubu remove the fuel subsidy?" }
-
-// Response
-{
-  "success": true,
-  "data": {
-    "claim": "Did Tinubu remove the fuel subsidy?",
-    "extractedClaim": null,
-    "verdict": "*VERDICT: VERIFIED*\n*Confidence: 95%*\n*What we found:*\nPresident Tinubu announced the removal of the petrol subsidy during his inauguration speech on May 29 2023.\n*Source:*\nhttps://www.premiumtimesng.com/...",
-    "structured": {
-      "verdict": "VERIFIED",
-      "confidence": 95,
-      "whatWeFound": "President Tinubu announced the removal of the petrol subsidy during his inauguration speech on May 29 2023.",
-      "source": "Premium Times",
-      "sources": [{ "title": "...", "url": "https://...", "site": "premiumtimesng.com" }]
-    },
-    "latencyMs": 3871
-  }
-}
-```
-
-To fact-check an image: send multipart `image=<file>` (or JSON `imageBase64` / `imageUrl`). The image is analyzed to extract the claim and is never stored or served back.
-
-### Verdict Format
-
-```
-*VERDICT: [VERIFIED / MISLEADING / FALSE / UNVERIFIED]*
-*Confidence: [0-100]%*
-*What we found:*
-[2-4 plain English sentences explaining the evidence]
-*Source:*
-[List of live URLs from search results]
-```
-
----
-
-## Quick Start
-
-### Prerequisites
-- Node.js 18+
-- MongoDB Atlas connection string
-- OpenRouter API key
-- Tavily API key
-- Twilio account with WhatsApp Sandbox
+Two terminals, because the website needs the API to return anything.
 
 ```bash
-# Bot server
-cd bot_server
-cp .env.example .env   # Fill in your keys
+# 1. API on :3000
+cd server
 npm install
-npm start              # Runs on :3000
-npm test               # 12 parallel live claims
-npm run test:pipeline  # End-to-end: server + image + scraper
-npm run verify:feeds   # Check all 17 RSS feeds
+cp .env.example .env        # then fill in the keys marked required
+npm start
 
-# Register the Telegram webhook (run after deploying):
-npm run setup:telegram -- https://your-app.up.railway.app/webhook/telegram
-
-# Dashboard (separate terminal)
-cd fc_dashboard
+# 2. Website on :5173
+cd website
 npm install
-npm run dev            # Local: http://localhost:5173
-
-# Public website (separate terminal)
-cd cs_website
-npm install
-npm run dev            # Local: http://localhost:5174
+npm run dev
 ```
 
-### Environment Variables
+Vite proxies `/api` to `http://localhost:3000`, so no environment file is
+needed for local development. Open http://localhost:5173.
 
-| Variable | Description |
-|----------|-------------|
-| `OPENROUTER_API_KEY` | OpenRouter API key for Gemini 2.5 Flash |
-| `TAVILY_API_KEY` | Tavily search API key |
-| `MONGODB_URI` | MongoDB Atlas connection string |
-| `TWILIO_ACCOUNT_SID` | Twilio account SID |
-| `TWILIO_AUTH_TOKEN` | Twilio auth token |
-| `TWILIO_WHATSAPP_NUMBER` | Twilio WhatsApp number |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather |
-| `TELEGRAM_WEBHOOK_SECRET` | Secret for Telegram webhook verification |
-| `PORT` | Server port (default: 3000) |
-| `LLM_MODEL` | Model ID on OpenRouter (default: `google/gemini-2.5-flash`) |
-| `LLM_TIMEOUT_MS` | LLM timeout (default: 25000) |
-| `PIPELINE_DEADLINE_MS` | Total pipeline budget (default: 25000) |
-| `SCRAPE_INTERVAL_MIN` | RSS sync interval in minutes (default: 30) |
-| `ARTICLE_TTL_DAYS` | Days to keep articles in Mongo (default: 14) |
-| `SCRAPE_SECRET` | Secret for the `/api/scrape` endpoint |
-| `MEDIA_MAX_MB` | Max image upload size (default: 5) |
-| `CACHE_TTL_SEC` | Verdict cache TTL (default: 3600) |
-| `CACHE_MAX_ENTRIES` | Verdict cache size (default: 300) |
-| `RATE_LIMIT_MAX` | Requests per 15 min per IP (default: 60) |
-| `VITE_API_URL` | API base URL for frontends |
+### Website checks
+
+```bash
+cd website
+npm run lint      # ESLint
+npm test          # Vitest — renders every route against a stubbed API
+npm run build     # production bundle into dist/
+npm run check     # all three, in that order
+```
+
+The test suite is a route smoke test: it mounts each page with a stubbed API
+and asserts the page renders, submits and gates correctly. It is the fastest
+way to catch a broken import or a field the server never sends.
 
 ---
 
-## Team
+## Configuration
 
-| Role | Person |
-|------|--------|
-| WhatsApp Webhook & Backend | adriel-babalola |
-| AI Pipeline, Dashboard & Website | debugAyo |
-| Knowledge Base Curation | adriel-babalola |
+### Website
+
+Every website setting is resolved in one file, `website/src/config/config.js`.
+Copy `website/.env.example` to `website/.env.local` and set what you need.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `VITE_API_URL` | same-origin | Absolute API origin. Leave unset unless the API is on another domain. |
+| `VITE_SITE_URL` | the Vercel URL | Used for share links and canonical URLs. |
+| `VITE_FEATURE_FACTCHECK` | `true` | Set `false` to remove `/fact-check`. |
+| `VITE_FEATURE_POLITICIANS` | `true` | Set `false` to remove `/politicians`. |
+| `VITE_FEATURE_MAP` | `true` | Set `false` to remove `/map`. |
+| `VITE_FEATURE_FEED` | `true` | Set `false` to remove `/live`. |
+| `VITE_FEATURE_REPORTS` | `true` | Set `false` to remove `/report`. |
+| `VITE_FEATURE_ADMIN` | `true` | Set `false` to remove `/admin`. |
+| `VITE_ADMIN_PASSWORD` | `civicsense` | Admin access gate. See the warning below. |
+
+A feature set to `false` removes the surface properly: the card, the navigation
+link and the route. `FeatureGate` renders the 404 page, so a disabled feature is
+unreachable by typing its URL rather than merely unlisted.
+
+> **The admin password is not a security boundary.** It is a `localStorage` flag
+> that hides the console from a casual visitor. Anyone who opens developer tools
+> can read the data. The moderation endpoints in `server/server.js` are
+> currently unauthenticated, which is the real gap to close. `AdminSettings`
+> says so on screen, and `services/auth.js` warns while the default is in use.
+
+### Server
+
+`server/.env.example` lists every key. The ones without a working default:
+`OPENROUTER_API_KEY` (the model behind the verdict), `TAVILY_API_KEY` (live
+search), `MONGODB_URI` (article index and moderation queue),
+`TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (WhatsApp), and
+`TELEGRAM_BOT_TOKEN`. The pipeline degrades honestly without them: with no model
+key, `/api/factcheck` returns an error rather than inventing a verdict, and
+with no database the moderation queue reads as empty rather than pretending to
+hold reports.
 
 ---
 
-## Acknowledgements
+## Deployment
 
-- **Gemini 2.5 Flash** via OpenRouter for AI reasoning
-- **Tavily** for Nigerian news search
-- **Twilio** for WhatsApp integration
-- **MongoDB Atlas** for free-tier database
-- **Leaflet** for open-source maps
-- **Premium Times, Punch, TheCable, Channels TV, Vanguard, Daily Post, Daily Trust, Leadership, Tribune, BusinessDay, PM News, Ripples, Information Nigeria, Dubawa, FactCheckHub, FactCheck Africa** for Nigerian journalism and fact-checking
+### Website
+
+Static output in `dist/`. `vercel.json` and `netlify.toml` both ship the SPA
+fallback, so a deep link like `/politicians/peter-gregory-obi` reaches the app instead
+of a 404, and hashed assets get a one-year immutable cache.
+
+If the API is on a different domain, set `VITE_API_URL` to its origin. The
+site's own privacy promises depend on that staying first-party — see below.
+
+### Server
+
+Any Node host that can run `npm start` and keep a process alive. It needs a
+reachable `MONGODB_URI`; without one the moderation endpoints return empty
+lists rather than failing loudly.
 
 ---
 
-*Built for the Nigerian Civic Tech hackathon. Fighting misinformation one WhatsApp message at a time.*
+## What this system does not do
+
+Stated here because the code is the honest source and the claims should match it.
+
+- **The admin console is not secure.** Password-gated, not authenticated.
+- **The report form takes no images.** The server stores evidence as a string.
+  The form therefore offers a text box and points people at WhatsApp for
+  screenshots, where the bot really does read the image. An upload control that
+  silently wrote `{}` to the database would be worse than no control at all.
+- **The politician directory is read-only.** 36 profiles covering the 18
+  presidential tickets INEC certified for the 16 January 2027 election, each one
+  generated from that single primary document rather than typed in by hand. There
+  is no CRUD API, so an edit is a change to `website/src/data/elections2027.js`
+  and needs named human review.
+- **"Verified" on a profile means one narrow thing.** It means INEC cleared that
+  person to contest, and it is scoped to that claim alone. The public record,
+  career history, education, statements and investigations arrays all ship empty
+  and render as an explicit "nothing verified yet", because naming a living
+  person as corrupt is defamatory if it is wrong and an empty section is the
+  honest state.
+- **Being a candidate is not a record.** A ticket says who is running and with
+  whom. It says nothing about anyone's conduct, and the site must never let the
+  two blur together.
+- **Six of the 36 profiles have a photograph.** Every portrait is licence-cleared
+  and credited twice: in a caption under the photo, and in full on `/credits`.
+  Stock images and news-scraped photos are not used, because putting the wrong
+  face next to a real name is misinformation. The rest render their initials.
+- **The local government roster is empty.** `website/src/data/lgas.js` has no
+  data because no official gazette has been transcribed. The report form falls
+  back to a free-text field, which is worse for data quality but better than
+  sending reports to the wrong local government.
+- **The map loads no tiles.** A third-party tile server would see every
+  visitor's IP address and the exact rectangle they loaded. Instead the map draws
+  Nigeria's state outlines from boundaries compiled into the bundle, by
+  `website/scripts/build-boundaries.mjs`, over a graticule, and plots
+  state-capital centroids. Boundaries are geoBoundaries gbOpen ADM1, CC BY 4.0,
+  credited on the map itself.
+- **Analytics describe the last 50 fact-checks.** Not lifetime totals, and not
+  visitors. There is no analytics vendor and no tracking script of any kind.
+
+---
+
+## Where the data comes from
+
+Two published facts carry almost all of the site's civic weight, and both trace to
+a primary document rather than to a research pass:
+
+| Data | Source | Licence / citation |
+|---|---|---|
+| Candidates, parties, running mates, ages, genders | [INEC final list of candidates](https://inecnigeria.org/documents/press/2027%20PRESIDENTIAL%20FINAL%20LIST.pdf), published 12 September 2026, signed by Rose Oriaran-Anthony | Primary source. Transcribed into `website/src/data/elections2027.js` |
+| State boundaries | [geoBoundaries](https://github.com/wmgeolab/geoBoundaries) gbOpen NGA ADM1, compiled into the bundle | CC BY 4.0, credited on the map and on `/credits` |
+| Politician photographs | Wikimedia Commons, plus US federal and Voice of America public-domain material | Per image, recorded in `website/src/data/photos.js` and listed on `/credits` |
+
+`/credits` renders the full attributions in one place, because a CC BY or CC BY-SA
+licence requires credit and "somewhere in the repo" is not where a reader will
+look for it.
+
+---
+
+## The bot
+
+Send a claim to the WhatsApp sandbox or the Telegram bot. The pipeline:
+
+1. Extract the claim, from text or from an image.
+2. Search the local RSS index and live search in parallel.
+3. Read the retrieved articles once and return a structured verdict.
+4. Format it for the channel, with source links.
+
+`documentation/CONTEXT_v2.md` has the product context and `documentation/API.md`
+the endpoint reference. `documentation/page_content_text.md` holds the public
+copy in one place, for review and for translation.
+
+---
+
+## Design
+
+The website follows `civic_sense_v1/fc_dashboard`: `#0a0a0a` surface, `#141414`
+cards, `#1e1e1e` borders, Inter, green accents, restrained motion, visible focus
+rings. Tokens live in `website/src/styles/index.css`. Leaflet is bundled rather
+than loaded from a CDN, because a CDN request is a third party learning who
+visited.
+
+---
+
+## Licence
+
+See `LICENSE`.

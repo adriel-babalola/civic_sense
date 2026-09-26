@@ -23,7 +23,7 @@ in real life, in the judges hands.
 
 civicsense/
 ├── CONTEXT.md            (This file — read before touching anything)
-├── bot_server/           (PRIMARY — the WhatsApp bot and AI pipeline)
+├── server/           (PRIMARY — the WhatsApp bot and AI pipeline)
 │   ├── server.js         (Express webhook entry point, single /api/factcheck)
 │   ├── scripts/
 │   │   └── verify-feeds.js      (Check all RSS feeds: npm run verify:feeds)
@@ -54,7 +54,7 @@ civicsense/
 ## How the Bot Works (Data Flow)
 
 1. User sends WhatsApp message to our Twilio number
-2. Twilio fires a POST request to bot_server/server.js
+2. Twilio fires a POST request to server/server.js
 3. server.js reads the message and checks what command it is:
    - Default: run fact-check pipeline
    - "What is happening in [State]": run conflict tracker (stretch goal)
@@ -89,7 +89,7 @@ Every response must follow this structure exactly:
 
 ## The Knowledge Base (civic_kb.json)
 
-Located at bot_server/data/civic_kb.json
+Located at server/data/civic_kb.json
 This is a manually curated array of Nigerian civic facts.
 Format:
 
@@ -149,14 +149,14 @@ Never commit .env to GitHub.
 
 | Feature | Folder | Owner | Priority |
 |---|---|---|---|
-| WhatsApp webhook | bot_server/server.js | adriel-babalola | MUST SHIP |
-| Gemini RAG pipeline | bot_server/services/gemini.js | debugAyo | MUST SHIP |
-| MongoDB connection | bot_server/services/db.js | debugAyo | MUST SHIP |
-| Civic knowledge base | bot_server/data/civic_kb.json | adriel-babalola | MUST SHIP |
-| RSS scraper | bot_server/services/scraper.js | adriel-babalola | HIGH |
+| WhatsApp webhook | server/server.js | adriel-babalola | MUST SHIP |
+| Gemini RAG pipeline | server/services/gemini.js | debugAyo | MUST SHIP |
+| MongoDB connection | server/services/db.js | debugAyo | MUST SHIP |
+| Civic knowledge base | server/data/civic_kb.json | adriel-babalola | MUST SHIP |
+| RSS scraper | server/services/scraper.js | adriel-babalola | HIGH |
 | Public dashboard | fc_dashboard/ | debugAyo | MEDIUM |
-| Conflict tracker | bot_server/server.js (new branch) | — | STRETCH |
-| Anonymous reporting | bot_server/server.js (new branch) | — | STRETCH |
+| Conflict tracker | server/server.js (new branch) | — | STRETCH |
+| Anonymous reporting | server/server.js (new branch) | — | STRETCH |
 
 ---
 

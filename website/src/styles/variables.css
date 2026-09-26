@@ -1,0 +1,66 @@
+/* CivicSense website — design tokens
+ *
+ * Single source of truth. Every colour, radius, shadow and easing used by the
+ * product is declared here. Components reference the generated utilities
+ * (bg-surface, text-fg, border-card-border, ...) and never raw hex values.
+ */
+
+/* ---------------------------------------------------------------------------
+ * Palette
+ * Dark-only by design. Elevation is communicated with surface lightness and
+ * hairline borders rather than shadows, which do not read on near-black.
+ * ------------------------------------------------------------------------ */
+:root {
+  /* Surfaces, light to dark */
+  --cs-surface-sunken: #050505;
+  --cs-surface: #0a0a0a;
+  --cs-surface-raised: #0f0f0f;
+  --cs-card: #141414;
+  --cs-card-hover: #191919;
+  --cs-card-active: #1e1e1e;
+
+  /* Hairlines */
+  --cs-border-subtle: #171717;
+  --cs-border: #1e1e1e;
+  --cs-border-strong: #2a2a2a;
+
+  /* Foreground */
+  --cs-fg: #ffffff;
+  --cs-fg-secondary: #a1a1aa;
+  --cs-fg-muted: #6b7280;
+  --cs-fg-faint: #52525b;
+
+  /* Brand */
+  --cs-brand: #1b7f4a;
+  --cs-brand-bright: #2ecc71;
+  --cs-brand-dim: #166534;
+
+  /* Signal */
+  --cs-live: #22c55e;
+  --cs-verified: #10b981;
+  --cs-false: #ef4444;
+  --cs-misleading: #f59e0b;
+  --cs-unverified: #6b7280;
+  --cs-unrest: #e8650a;
+
+  /* Hero overlay. Navy rather than black so photographs keep their colour
+     temperature instead of going flat. Stored as channels so the overlay
+     utilities can apply their own alpha without a second token per step. */
+  --cs-overlay-navy: 13 27 42;
+
+  /* Focus */
+  --cs-focus: #2ecc71;
+}
+
+/* ---------------------------------------------------------------------------
+ * Motion
+ * One easing curve for UI, one for entrances. Durations stay under 200ms for
+ * state changes so the interface never feels laggy.
+ * ------------------------------------------------------------------------ */
+:root {
+  --cs-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --cs-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --cs-duration-fast: 120ms;
+  --cs-duration: 180ms;
+  --cs-duration-slow: 320ms;
+}

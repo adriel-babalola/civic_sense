@@ -1,0 +1,158 @@
+/* CivicSense website — animation primitives
+ *
+ * Everything here is subtle by intent. Skeletons communicate loading, the
+ * live dot communicates freshness, and page content fades in once. No
+ * decorative motion, no parallax, nothing that competes with the content.
+ */
+
+@keyframes cs-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes cs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes cs-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes cs-ping-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.5;
+  }
+  70%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes cs-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes cs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Loading placeholder. The gradient sweep is the only looping animation a
+ * user waits on, so it is deliberately low-contrast. */
+.cs-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--cs-card) 25%,
+    var(--cs-card-hover) 50%,
+    var(--cs-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: cs-shimmer 1.5s var(--cs-ease-in-out) infinite;
+}
+
+/* Page-level entrance. Applied once per route change. */
+.cs-enter {
+  animation: cs-fade-in var(--cs-duration-slow) var(--cs-ease-out) both;
+}
+
+.cs-stagger > * {
+  animation: cs-fade-in var(--cs-duration-slow) var(--cs-ease-out) both;
+}
+.cs-stagger > *:nth-child(1) {
+  animation-delay: 0ms;
+}
+.cs-stagger > *:nth-child(2) {
+  animation-delay: 40ms;
+}
+.cs-stagger > *:nth-child(3) {
+  animation-delay: 80ms;
+}
+.cs-stagger > *:nth-child(4) {
+  animation-delay: 120ms;
+}
+.cs-stagger > *:nth-child(5) {
+  animation-delay: 160ms;
+}
+.cs-stagger > *:nth-child(6) {
+  animation-delay: 200ms;
+}
+
+/* Freshness indicator: a solid dot with a single soft halo. */
+.cs-live-dot {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--cs-live);
+}
+.cs-live-dot::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--cs-live);
+  animation: cs-ping-soft 2s var(--cs-ease-out) infinite;
+}
+
+.cs-spinner {
+  animation: cs-spin 700ms linear infinite;
+}
+
+/* Source ticker. The track holds two copies of the list and slides exactly
+ * -50%, so the loop is seamless. */
+.cs-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: cs-marquee 48s linear infinite;
+}
+.cs-marquee:hover .cs-marquee-track,
+.cs-marquee:focus-within .cs-marquee-track {
+  animation-play-state: paused;
+}
+
+/* Respect the OS setting. Loading states stay readable, motion stops. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .cs-skeleton {
+    animation: none;
+    background: var(--cs-card);
+  }
+
+  .cs-marquee-track {
+    animation: none;
+  }
+}

@@ -1,8 +1,0 @@
-.cursor/
-.git/
-.github/
-.next/
-.open-next/
-node_modules/
-.env
-.env.example

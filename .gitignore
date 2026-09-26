@@ -5,4 +5,4 @@ dist/
 .idea/
 
 # Generated test fixtures
-bot_server/test/fixtures/
+server/test/fixtures/
