@@ -135,8 +135,10 @@ civic_sense/
 │   ├── index.html
 │   └── vite.config.js
 │
-├── CONTEXT.md                         # Original project brief (internal)
-├── script.md                          # Judge demo script (internal)
+├── documentation/                     # Supplementary docs
+│   ├── API.md                          # Bot server API reference (all endpoints)
+│   ├── CONTEXT.md                      # Original project brief (internal)
+│   └── script.md                       # Judge demo script (internal)
 └── README.md                          # This file
 ```
 
