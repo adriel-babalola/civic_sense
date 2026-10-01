@@ -7,6 +7,7 @@
     "start": "node server.js",
     "test": "node test/testKratos.js",
     "test:pipeline": "node test/testPipeline.js",
+    "test:meta": "node test/testMetaWhatsapp.js",
     "verify:feeds": "node scripts/verify-feeds.js",
     "setup:telegram": "node scripts/setup-telegram.js"
   },

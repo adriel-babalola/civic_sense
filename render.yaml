@@ -1,0 +1,68 @@
+services:
+  - type: web
+    name: civic-sense-bot-server
+    runtime: node
+    plan: starter
+    region: frankfurt
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/live
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: PORT
+        value: "3000"
+      - key: NODE_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: info
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: MONGODB_URI
+        sync: false
+      - key: META_WHATSAPP_TOKEN
+        sync: false
+      - key: META_WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: META_WHATSAPP_WABA_ID
+        sync: false
+      - key: META_WEBHOOK_VERIFY_TOKEN
+        sync: false
+      - key: META_APP_SECRET
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_NUMBER
+        sync: false
+      - key: SCRAPE_SECRET
+        generateValue: true
+      - key: LLM_MODEL
+        value: google/gemini-2.5-flash
+      - key: LLM_TIMEOUT_MS
+        value: "12000"
+      - key: PIPELINE_DEADLINE_MS
+        value: "14000"
+      - key: SCRAPE_INTERVAL_MIN
+        value: "30"
+      - key: ARTICLE_TTL_DAYS
+        value: "14"
+      - key: MEDIA_MAX_MB
+        value: "5"
+      - key: META_MEDIA_MAX_MB
+        value: "5"
+      - key: CACHE_TTL_SEC
+        value: "3600"
+      - key: CACHE_MAX_ENTRIES
+        value: "300"
+      - key: RATE_LIMIT_MAX
+        value: "60"
