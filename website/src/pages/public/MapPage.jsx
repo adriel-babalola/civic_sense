@@ -1,18 +1,17 @@
 import { useEffect, useState } from "react";
-import { Layers, MapPin, RefreshCw } from "lucide-react";
+import { Layers, MapPin } from "lucide-react";
 import { useIncidents } from "../../hooks/useIncidents";
-import { CONFIG } from "../../config/config";
 import { ALL } from "../../utils/constants";
 import { INCIDENT_TYPES, INCIDENT_META } from "../../utils/constants";
-import { Container, PageHeader, ErrorState, EmptyState } from "../../components/shared/Layout";
+import { Container, PageHeader, EmptyState } from "../../components/shared/Layout";
 import { Select, SegmentedControl } from "../../components/shared/Input";
 import { Button } from "../../components/shared/Button";
 import { TypeBadge } from "../../components/shared/Badge";
-import { Skeleton } from "../../components/shared/Skeleton";
 import { IncidentLegend } from "../../components/shared/Legend";
 import { IncidentMap } from "../../components/map/IncidentMap";
 import { IncidentCard } from "../../components/incidents/IncidentCard";
-import { relativeTime, formatDate } from "../../utils/formatters";
+import { formatDate } from "../../utils/formatters";
+import { SampleBanner } from "../../components/shared/SampleBanner";
 
 /**
  * Incident map.
@@ -20,6 +19,10 @@ import { relativeTime, formatDate } from "../../utils/formatters";
  * Layout is map-plus-list on desktop and a list-then-map stack on mobile: the
  * list is the accessible representation of the same data, so the map is never
  * the only way to read what happened.
+ *
+ * Reads bundled demonstration records rather than GET /api/incidents, which had no
+ * server behind it on a static host and left this page showing an error instead
+ * of a map. <SampleBanner> states that the records are samples.
  */
 export function MapPage() {
   const {
@@ -27,10 +30,6 @@ export function MapPage() {
     markers,
     counts,
     availableStates,
-    isLoading,
-    error,
-    updatedAt,
-    refresh,
     filters,
     view,
   } = useIncidents();
@@ -55,22 +54,12 @@ export function MapPage() {
         eyebrow="Field reports"
         title="Incident map"
         description="Corroborated incidents only. A report appears here after a moderator has matched it to independent reporting. The map is not a stream of unverified claims."
-        action={
-          <Button
-            variant="secondary"
-            size="md"
-            onClick={refresh}
-            loading={isLoading}
-            aria-label="Refresh incidents"
-          >
-            <RefreshCw size={14} aria-hidden="true" />
-            {updatedAt ? `Updated ${relativeTime(updatedAt)}` : "Refresh"}
-          </Button>
-        }
       />
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:max-w-lg">
+      <SampleBanner className="mt-5" />
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="grid flex-1 gap-3 sm:grid-cols-2 lg:max-w-2xl">
           <SegmentedControl
             label="Filter by incident type"
             value={filters.type}
@@ -101,15 +90,6 @@ export function MapPage() {
         ) : null}
       </div>
 
-      {error ? (
-        <ErrorState
-          className="mt-6"
-          error={error}
-          onRetry={refresh}
-          title="The incident feed did not load"
-        />
-      ) : null}
-
       <div className="mt-5 grid gap-5 lg:grid-cols-[1.35fr_0.65fr]">
         <div className="order-2 lg:order-1">
           <IncidentMap
@@ -133,13 +113,7 @@ export function MapPage() {
           </div>
 
           <div className="mt-3 max-h-[440px] flex-1 space-y-2 overflow-y-auto pr-0.5 lg:max-h-[520px]">
-            {isLoading && !incidents.length ? (
-              <div className="space-y-2">
-                {[0, 1, 2].map((index) => (
-                  <Skeleton key={index} className="h-24 w-full rounded-card" />
-                ))}
-              </div>
-            ) : incidents.length ? (
+            {incidents.length ? (
               incidents.map((incident) => (
                 <IncidentCard
                   key={incident.id}
@@ -197,10 +171,6 @@ export function MapPage() {
         </div>
       ) : null}
 
-      <p className="cs-hint mt-6">
-        Feed polls every {Math.round(CONFIG.POLL_INTERVAL_MS / 1000)} seconds. Last checked{" "}
-        {updatedAt ? relativeTime(updatedAt) : "never"}.
-      </p>
     </Container>
   );
 }

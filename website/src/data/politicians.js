@@ -81,6 +81,51 @@ const PHOTOS = {
   "Musa Mohammed Rabiu Kwankwaso": "kwankwaso",
 };
 
+/*
+ * Research-pack photographs, keyed by the pack's own short name.
+ *
+ * Added at the owner's instruction after a 30-image pack was assembled by image
+ * search. Three of those came with a verified open licence; the rest did not,
+ * and ./photoPack.js records the real source and "Licence not verified" for each
+ * rather than asserting a CC licence that was never confirmed.
+ *
+ * Kept in a SEPARATE map from PHOTOS above rather than merged into it, because
+ * the two have different provenance and that difference has to stay visible:
+ *
+ *   - PHOTOS are Wikimedia Commons files whose licence and author were checked.
+ *     Those keep their proper CC terms on /credits.
+ *   - These are pack images. For Atiku and Kwankwaso the pack has a copy of the
+ *     same picture, and the curated entry above deliberately wins, so a verified
+ *     credit is never replaced by an unverified one.
+ *
+ * Every entry here is a person who IS on a certified 2027 ticket. The other 21
+ * pack subjects are serving governors, senators and party chairs; they have no
+ * profile in this dataset, so nothing here points at them.
+ */
+const PACK_PHOTOS = {
+  "Atiku Abubakar": "atiku",
+  "Bola Ahmed Tinubu": "tinubu",
+  "Kashim Shettima": "shettima",
+  "Peter Obi": "pack-peter-obi",
+  "Rabiu Kwankwaso": "kwankwaso",
+  "Rotimi Amaechi": "amaechi",
+  "Sandy Onor": "pack-sandy-onor",
+  "Seyi Makinde": "pack-seyi-makinde",
+};
+
+/**
+ * Curated licence first, pack image second.
+ *
+ * Written as a function rather than `{ ...PACK_PHOTOS, ...PHOTOS }` so the
+ * precedence is a decision in one readable line. Six of the eight pack subjects
+ * who are certified candidates already have a Wikimedia Commons photograph on
+ * file, and those must keep it: swapping a verified CC BY-SA portrait for an
+ * unverified copy of what looks like the same picture would be a downgrade.
+ */
+function resolvePhotoId(name) {
+  return PHOTOS[name] || PACK_PHOTOS[name] || null;
+}
+
 /** Encyclopaedia entries, for readers who want to check a name. */
 const REFERENCES = {
   "Bola Ahmed Tinubu": "https://en.wikipedia.org/wiki/Bola_Tinubu",
@@ -152,9 +197,9 @@ function build(ticket) {
       gender,
       since: String(Number(INEC_SOURCE.published.slice(0, 4))),
       bio: career ? `${career} ${certified}` : certified,
-      photoId: PHOTOS[name] || null,
-      photo: getPhoto(PHOTOS[name])?.url || null,
-      photoCredit: getPhoto(PHOTOS[name]),
+      photoId: resolvePhotoId(name),
+      photo: getPhoto(resolvePhotoId(name))?.url || null,
+      photoCredit: getPhoto(resolvePhotoId(name)),
       runningMate: {
         name: ticket.runningMate,
         slug: mateSlug,

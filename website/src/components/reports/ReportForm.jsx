@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useMemo, useState } from "react";
 import { Loader2, Lock, Send, ShieldCheck } from "lucide-react";
 import { useSubmitReport } from "../../hooks/useReports";
 import { useRateLimit } from "../../hooks/useRateLimit";
@@ -30,6 +29,22 @@ const STATE_OPTIONS = STATES.map((state) => ({ value: state, label: state }));
 /**
  * Anonymous incident report.
  *
+ * Scoped to incidents only, and deliberately unaware of politicians. This form
+ * used to read `?politician=` and prefill "Regarding {name}:" into the
+ * description, which quietly merged two unrelated things:
+ *
+ *   - An incident report is anonymous on purpose. Its safety argument is that
+ *     there is no identity field and no per-person context to leak. Prefilling a
+ *     named subject made the receipt and the stored record read as though we had
+ *     linked a person to a report, which is precisely the association this form
+ *     exists to avoid making.
+ *   - A sourced profile update is not anonymous and not an incident. It is
+ *     reviewed against a primary source before publication, which is a different
+ *     process with a different standard.
+ *
+ * Suggesting a correction or an addition to a politician's profile is now a
+ * separate form: ./ProfileSuggestionForm, at /politicians/:slug/suggest.
+ *
  * Three decisions worth stating, because they are the reason this form is safe
  * to submit from a phone at a polling unit:
  *
@@ -41,7 +56,6 @@ const STATE_OPTIONS = STATES.map((state) => ({ value: state, label: state }));
  *      create two identical reports in the moderation queue.
  */
 export function ReportForm({ onSubmitted }) {
-  const [searchParams] = useSearchParams();
   const { submit, isSubmitting, error } = useSubmitReport();
   const rateLimit = useRateLimit();
 
@@ -60,21 +74,6 @@ export function ReportForm({ onSubmitted }) {
     () => getLgas(values.state).map((lga) => ({ value: lga, label: lga })),
     [values.state],
   );
-
-  // A profile page deep-links with the office-holder's name. It is a hint in
-  // the description, never a hidden field — the server only accepts the four
-  // documented fields, and inventing a `politician` field would be dropped.
-  const subject = searchParams.get("politician");
-  useEffect(() => {
-    if (subject && !values.description) {
-      setValues((current) => ({
-        ...current,
-        description: `Regarding ${subject}: `,
-      }));
-    }
-    // Only on mount — a later `subject` change must not clobber typing.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject]);
 
   const { errors, isValid } = useMemo(
     () =>

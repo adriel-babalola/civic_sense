@@ -214,6 +214,50 @@ export function SegmentedControl({ label, value, onChange, options, className, s
   );
 }
 
+/**
+ * Grid/list switch.
+ *
+ * Icon-only, so each button carries its own accessible name — a pair of unlabelled
+ * pictograms is the classic way to ship a control nobody can use with a screen
+ * reader. `aria-pressed` rather than `role="radio"` because this chooses a layout,
+ * not a value that filters the data.
+ */
+export function ViewToggle({ value, onChange, options, label = "Layout", className }) {
+  return (
+    <div
+      role="group"
+      aria-label={label}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-0.5 rounded-control border border-line bg-surface p-0.5",
+        className,
+      )}
+    >
+      {options.map((option) => {
+        const selected = option.value === value;
+
+        return (
+          <button
+            key={option.value}
+            type="button"
+            aria-pressed={selected}
+            aria-label={option.label}
+            title={option.label}
+            onClick={() => onChange(option.value)}
+            className={cn(
+              "flex h-8 w-8 items-center justify-center rounded-[6px] transition-colors",
+              selected
+                ? "bg-card-active text-fg shadow-card"
+                : "text-fg-faint hover:bg-white/[0.03] hover:text-fg-secondary",
+            )}
+          >
+            <option.icon size={15} aria-hidden="true" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /** Disclosure row, used by the FAQ. */
 export function Accordion({ open, onToggle, question, children }) {
   const id = useId();

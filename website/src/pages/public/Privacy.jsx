@@ -1,5 +1,7 @@
 import { Container, PageHeader } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
+import { Alert } from "../../components/shared/Field";
+import { CONFIG } from "../../config/config";
 
 /**
  * Privacy policy.
@@ -23,11 +25,11 @@ const COLLECTED = [
   },
   {
     label: "Optional evidence",
-    body: "Text you choose to type into the evidence box: a description of what you saw, or a link to a video or post. The report form does not accept image uploads, because the server stores this field as text and we would rather offer a box that works than an upload that silently fails.",
+    body: "Text you choose to type into the evidence box: a description of what you saw, or a link to a video or post. The report form does not accept image uploads, because the field is stored as text and we would rather offer a box that works than an upload that silently fails.",
   },
   {
     label: "Technical, unavoidable",
-    body: "The server's access log records the IP address that made the request, as every web server does. It is not stored alongside your report, and it is not used to identify you.",
+    body: "The host serving this page records the IP address that made the request, as every web server does. Your report is not sent with it. In this deployment the report never leaves your browser at all. See the notice below.",
   },
 ];
 
@@ -49,6 +51,18 @@ export function Privacy() {
             building a profile of you across visits.
           </p>
         </section>
+
+        {/* Sits directly under the summary because it changes what the rest of the
+            page means. The sections below describe how reports are handled once a
+            report server is connected; right now none of that is true, and a
+            visitor reading "we will delete it" needs to know we currently cannot. */}
+        <Alert tone="info" title="This deployment has no report server">
+          This copy describes the intended behaviour of CivicSense. The version you are using has
+          no report server connected. A report you submit is written to your own browser's local
+          storage and is not transmitted to us, so nobody on our side receives it, nothing is
+          added to a moderation queue, and nothing reaches the public incident map. You can
+          inspect or remove what you have saved at any time from your browser settings.
+        </Alert>
 
         <section>
           <h2 className="text-heading text-fg">What we do not collect</h2>
@@ -98,9 +112,9 @@ export function Privacy() {
         <section>
           <h2 className="text-heading text-fg">Rate limiting</h2>
           <p className="mt-3">
-            To stop one browser flooding the moderation queue, the report form allows a limited
-            number of submissions per hour, counted locally in your own browser. Clearing your
-            browser data resets that counter. It is a courtesy limit, not an identity, which is
+            To stop one browser saving an unbounded pile of reports, the report form allows a
+            limited number of submissions per hour, counted locally in your own browser. Clearing
+            your browser data resets that counter. It is a courtesy limit, not an identity, which is
             the trade-off we have chosen deliberately, because the alternative is asking you to
             identify yourself.
           </p>
@@ -113,14 +127,23 @@ export function Privacy() {
             against independent reporting. Published reports contain the description and the state
             and LGA, never anything about the person who filed it, because we never had it.
           </p>
+          <p className="mt-3">
+            In this deployment nothing is published, because nothing is received. The incidents
+            shown on the map are a small bundled demonstration set, not reports from the public.
+          </p>
         </section>
 
         <section>
           <h2 className="text-heading text-fg">Deletion</h2>
           <p className="mt-3">
             Because we hold no identifier, we cannot look up a report to delete it by asking who
-            sent it. If you filed something and need it removed, describe the report: state, LGA
-            and approximate date are enough to locate it, and we will delete it.
+            sent it. Once a report server is connected, describing a report by state, LGA and
+            approximate date is enough to locate it, and we will delete it.
+          </p>
+          <p className="mt-3">
+            Until then, deletion is something you do yourself, which is arguably better: clearing
+            this site's data in your browser removes everything it has stored, with nothing to
+            request from us and nothing left behind.
           </p>
         </section>
 
@@ -138,15 +161,15 @@ export function Privacy() {
           <p className="mt-3">
             One address, forwarded to a small team:{" "}
             <a
-              href="mailto:civic-sense@proton.me"
+              href={`mailto:${CONFIG.CONTACT_EMAIL}`}
               className="font-medium text-brand-bright underline underline-offset-2 hover:no-underline"
             >
-              civic-sense@proton.me
+              {CONFIG.CONTACT_EMAIL}
             </a>
             .
           </p>
           <Button
-            href="mailto:civic-sense@proton.me"
+            href={`mailto:${CONFIG.CONTACT_EMAIL}`}
             variant="secondary"
             size="md"
             className="mt-5"

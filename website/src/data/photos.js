@@ -1,3 +1,5 @@
+import { PACK_PHOTO_CREDITS, PHOTO_PACK } from "./photoPack";
+
 /**
  * Cleared photo licences.
  *
@@ -60,6 +62,7 @@ const COMMONS = "https://commons.wikimedia.org/wiki/File:";
  * @property {string} source    Commons description page.
  * @property {string} title     What the photograph is.
  * @property {string} taken     Year the photograph was taken or published.
+ * @property {string} [modifications]  Change made to the published file, if any.
  */
 
 /** @type {Record<string, PhotoCredit>} */
@@ -136,7 +139,92 @@ export const PHOTO_CREDITS = {
     title: "Chibuike Rotimi Amaechi at the IMO headquarters, London",
     taken: "2016",
   },
+
+  /*
+   * From the 30-image research photo pack (see ./photoPack.js and
+   * research/photo-pack). It arrived with 30 candidates' portraits; three were
+   * under an open licence and this is the only one of those not already bundled
+   * above. Atiku and Kwankwaso are in the pack too, but the copies here are the
+   * better-sourced ones, so the pack versions were left alone.
+   *
+   * An orphan entry for now: Barau Jibrin is not on a certified 2027 ticket in
+   * this dataset, so no profile renders it yet. `jonathan` is in the same
+   * position. Keeping the credit means the licence, the author and the source
+   * are already recorded and correct on the day a profile for him exists, rather
+   * than being reconstructed from memory later.
+   *
+   * The other 27 pack images are deliberately NOT here. Their rights notes all
+   * read "not independently verified", and they came from X, news outlets,
+   * campaign sites and image-search permalinks. `photoPack.js` records what they
+   * are and why they were held back.
+   */
+  barau: {
+    file: "barau",
+    author: "Okohamodu",
+    license: "CC BY 4.0",
+    licenseUrl: "https://creativecommons.org/licenses/by/4.0",
+    source: `${COMMONS}Barau_I_Jibrin_cropped_portrait.jpg`,
+    title: "Barau I Jibrin",
+    taken: "2023",
+    // CC BY requires indicating changes, and this is one: the pack's copy is
+    // 815x924 and the bundled one is 500x567. Purely a downscale, no retouching,
+    // so it is disclosed here rather than left out.
+    modifications: "resized to 500x567",
+  },
 };
+
+/**
+ * Every usable credit: the hand-curated Wikimedia entries, then the research
+ * pack's.
+ *
+ * The pack also has photos for several people we already hold cleared originals
+ * for, but the copies in PHOTO_CREDITS carry verified CC terms while the pack
+ * copies carry "not independently verified". UNSUPERSEDED_PACK_CREDITS drops
+ * those rather than merging them, so a verified credit is never replaced or
+ * duplicated by an unverified one.
+ *
+ * The pack entries are prefixed `pack-` in the assets folder for the same
+ * reason: the names cannot collide, so this merge can never accidentally shadow
+ * a curated entry by accident of a filename.
+ */
+const CURATED_SUBJECTS = new Set(
+  Object.values(PHOTO_CREDITS).map((credit) => credit.title.trim().toLowerCase()),
+);
+
+/**
+ * Pack credits that do not earn a row.
+ *
+ * The pack photographed several people we already hold a cleared Wikimedia
+ * Commons file for, including Nyesom Wike, who is not on a 2027 ticket and so is
+ * absent from the roster entirely. Emitting those would list the person twice on
+ * /credits and put the "Licence not verified" row next to the verified one.
+ *
+ * Filtered by subject rather than by a list of names kept in the generator,
+ * because photos.js imports this module and not the other way round: deriving it
+ * here keeps one source of truth. A pack photo is dropped only when a curated
+ * photo of the same person already exists, never on any other basis.
+ */
+const UNSUPERSEDED_PACK_CREDITS = Object.fromEntries(
+  Object.entries(PACK_PHOTO_CREDITS).filter(
+    ([, credit]) => !CURATED_SUBJECTS.has(credit.title.trim().toLowerCase()),
+  ),
+);
+
+const ALL_CREDITS = { ...PHOTO_CREDITS, ...UNSUPERSEDED_PACK_CREDITS };
+
+/**
+ * Pack image for a person, looked up by their name in the research pack.
+ *
+ * The pack writes common short names ("Peter Obi") while the roster uses the
+ * INEC form ("Peter Gregory Obi"), so the lookup goes through the pack's own
+ * alias map rather than string-matching at runtime. Returns null for anyone not
+ * in the pack, which is most of the roster, and for Cleopas Zuwoghe whose file
+ * is a saved search page rather than a photograph.
+ */
+export function getPackPhotoIdFor(packName) {
+  const entry = PHOTO_PACK.find((item) => item.packName === packName);
+  return entry?.asset || null;
+}
 
 /**
  * Resolve a photo id to a renderable URL plus its credit.
@@ -150,7 +238,7 @@ export const PHOTO_CREDITS = {
  */
 export function getPhoto(id) {
   if (!id) return null;
-  const credit = PHOTO_CREDITS[id];
+  const credit = ALL_CREDITS[id];
   if (!credit) return null;
   const url = BY_ID[credit.file];
   if (!url) return null;
@@ -159,7 +247,7 @@ export function getPhoto(id) {
 
 /** Every cleared photo, for the /credits page. */
 export function getAllPhotos() {
-  return Object.entries(PHOTO_CREDITS)
+  return Object.entries(ALL_CREDITS)
     .map(([id]) => ({ id, ...getPhoto(id) }))
     .filter((photo) => photo.url);
 }

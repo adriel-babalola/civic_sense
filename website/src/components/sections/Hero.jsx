@@ -36,9 +36,133 @@ const SLIDES = [
   },
 ];
 
-const SLIDE_DURATION_MS = 7000;
+export const SLIDE_DURATION_MS = 7000;
 const CROSSFADE_SECONDS = 1.4;
-const ZOOM_SECONDS = 14;
+
+/**
+ * The dolly: how far the photograph travels, and how long one full breath takes.
+ *
+ * Units are the trap here. Motion's `duration` is in SECONDS while
+ * SLIDE_DURATION_MS is MILLISECONDS, and assigning one to the other gave this
+ * animation a duration of 7000 seconds: a 9% push spread over nearly two hours,
+ * which reads as no animation at all. So the zoom is no longer handed to Motion
+ * as a transition at all. It is driven by a requestAnimationFrame loop in
+ * DollyImage, which writes `transform` straight to the node. Three things fall
+ * out of that, each of which a declarative transition could not do:
+ *
+ *   1. Rate is set by arithmetic on one millisecond constant, with no
+ *      seconds/milliseconds conversion anywhere that can go wrong again.
+ *   2. It repeats. `repeat: Infinity` on a Motion transition keeps running, but
+ *      a slide that has finished a loop sits wherever the loop left it, so a
+ *      returning slide faded in mid-cycle at an arbitrary scale. A rAF loop
+ *      restarted on becoming visible always begins at ZOOM_FROM.
+ *   3. Hover actually pauses it. `paused` already stopped the crossfade timer,
+ *      but the zoom used to keep running under a held slide and freeze at its
+ *      maximum, so hovering left the photograph visibly stuck mid-move. Here the
+ *      elapsed clock stops, so the image holds exactly where it was.
+ *
+ * DOLLY_CYCLE_MS is four slide dwells. That is what makes the repeat read as
+ * deliberate rather than as drift: the cycle is an exact multiple of the
+ * rotation, so the scale is at the same point relative to every crossfade and
+ * the loop looks intentional instead of slowly sliding out of phase with the
+ * carousel.
+ *
+ * The amplitude is 18% over 28 seconds, which is slower than the previous 14% in
+ * seven and needs the extra travel to stay visible. That was the real trade:
+ * slowing the push without widening it just recreates the original invisible
+ * animation, because an already `object-cover` photograph under a 50% navy wash
+ * hides small changes completely. Scale never goes below ZOOM_FROM, so
+ * `object-cover` cannot expose an edge at either extreme.
+ */
+export const DOLLY_CYCLE_MS = SLIDE_DURATION_MS * 4;
+export const ZOOM_SECONDS = DOLLY_CYCLE_MS / 1000;
+export const ZOOM_FROM = 1;
+export const ZOOM_TO = 1.18;
+
+/**
+ * Scale for a point in the cycle.
+ *
+ * A triangle wave mapped through smoothstep: out to ZOOM_TO at the midpoint,
+ * back to ZOOM_FROM, with the velocity easing to zero at both ends. A plain
+ * triangle would reverse instantly at the extremes, which shows as a corner in
+ * the motion; smoothstep gives the long, even travel in the middle of each
+ * push with a soft landing at the top and bottom.
+ */
+export function dollyScale(progress) {
+  const t = ((progress % 1) + 1) % 1;
+  const triangle = t < 0.5 ? t * 2 : (1 - t) * 2;
+  const eased = triangle * triangle * (3 - 2 * triangle);
+  return ZOOM_FROM + (ZOOM_TO - ZOOM_FROM) * eased;
+}
+
+/**
+ * One slide's photograph, with its own dolly clock.
+ *
+ * A component rather than a loop inside the map so that each slide gets an
+ * independent `elapsed` starting at zero. The parent already remounts the
+ * element per activation via `key`, but a fresh component is what makes the
+ * clock restart cleanly instead of inheriting wherever the previous cycle
+ * happened to be.
+ *
+ * The transform is written to the DOM node rather than held in React state. A
+ * setState per frame would re-render the whole hero sixty times a second and
+ * reconcile three slides and the headline on every tick; `el.style.transform` is
+ * a single property write that the compositor handles on its own.
+ */
+function DollyImage({ slide, index, isActive, paused, shouldReduceMotion }) {
+  const imgRef = useRef(null);
+
+  // Reset the clock when this slide becomes the visible one. Declared before the
+  // rAF effect on purpose: effects run in order, so the new activation is at
+  // zero by the time the loop starts reading it. Deliberately NOT keyed on
+  // `paused` — a hover must hold the current scale, not restart the move.
+  const elapsedRef = useRef(0);
+  useEffect(() => {
+    elapsedRef.current = 0;
+  }, [isActive, shouldReduceMotion]);
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el || !isActive) return undefined;
+
+    if (shouldReduceMotion) {
+      el.style.transform = `scale(${ZOOM_FROM})`;
+      return undefined;
+    }
+
+    let frame = 0;
+    let last = performance.now();
+
+    const tick = (now) => {
+      const delta = now - last;
+      last = now;
+      if (!paused) {
+        elapsedRef.current = (elapsedRef.current + delta) % DOLLY_CYCLE_MS;
+      }
+      el.style.transform = `scale(${dollyScale(elapsedRef.current / DOLLY_CYCLE_MS)})`;
+      frame = requestAnimationFrame(tick);
+    };
+
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [isActive, paused, shouldReduceMotion]);
+
+  return (
+    <img
+      ref={imgRef}
+      src={slide.src}
+      alt=""
+      // Decorative in the accessibility tree: the hero is named by its heading,
+      // and announcing a stock photograph adds nothing.
+      aria-hidden="true"
+      className="h-full w-full object-cover will-change-transform"
+      style={{ transform: `scale(${ZOOM_FROM})` }}
+      loading={index === 0 ? "eager" : "lazy"}
+      fetchPriority={index === 0 ? "high" : "auto"}
+      decoding="async"
+    />
+  );
+}
 
 export function Hero() {
   const [active, setActive] = useState(0);
@@ -95,23 +219,18 @@ export function Hero() {
               animate={{ opacity: isActive ? 1 : 0 }}
               transition={{ duration: CROSSFADE_SECONDS, ease: "easeInOut" }}
             >
-              <motion.img
-                src={slide.src}
-                alt=""
-                // Decorative in the accessibility tree: the hero is named by its
-                // heading, and announcing a stock photograph adds nothing.
-                aria-hidden="true"
-                className="h-full w-full object-cover"
-                loading={index === 0 ? "eager" : "lazy"}
-                fetchPriority={index === 0 ? "high" : "auto"}
-                decoding="async"
-                initial={false}
-                animate={shouldReduceMotion ? { scale: 1 } : { scale: [1, 1.06] }}
-                transition={
-                  shouldReduceMotion
-                    ? undefined
-                    : { duration: ZOOM_SECONDS, repeat: Infinity, ease: "linear" }
-                }
+              {/* Keyed on the activation so a returning slide remounts at scale
+                  ZOOM_FROM with a fresh clock. Without the key the photograph
+                  fades back in wherever its previous cycle had reached, which
+                  looks like a jump. Both images are decoded and cached after the
+                  first rotation, so the remount is not a visible flash. */}
+              <DollyImage
+                key={`${slide.src}-${isActive}`}
+                slide={slide}
+                index={index}
+                isActive={isActive}
+                paused={paused}
+                shouldReduceMotion={shouldReduceMotion}
               />
             </motion.div>
           </div>

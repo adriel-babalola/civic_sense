@@ -1,9 +1,15 @@
-/** Incident map data, with client-side filtering and a bounded history. */
+/**
+ * Incident map data, with client-side filtering.
+ *
+ * Read from ./data/demo-data.js rather than fetched. The site is a static
+ * bundle, so a request for GET /api/incidents had no server behind it and the
+ * map rendered an error instead of a map. Filtering, the legend counts, the
+ * marker list and the viewport all still come from here, so restoring the API is
+ * only a change to the first import in this file.
+ */
 
 import { useCallback, useMemo, useState } from "react";
-import { useAsync } from "./useAsync";
-import { getIncidents } from "../services/api";
-import { CONFIG } from "../config/config";
+import { INCIDENTS } from "../data/demo-data";
 import { getCoords, fromApiStateName } from "../data/states";
 import { ALL } from "../utils/constants";
 
@@ -20,30 +26,22 @@ function incidentKey({ type, state, lga, timestamp, description }) {
 const DEFAULT_CENTER = [9.08, 8.68];
 const DEFAULT_ZOOM = 6;
 
-export function useIncidents({ intervalMs = CONFIG.POLL_INTERVAL_MS } = {}) {
+export function useIncidents() {
   const [type, setType] = useState(ALL);
   const [state, setState] = useState(ALL);
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
-  const { data, error, isLoading, updatedAt, refresh, reload } = useAsync(
-    (signal) => getIncidents(signal),
-    { intervalMs },
-  );
-
-  // The server sends no identifier: `GET /api/incidents` merges hard-coded
-  // seed rows with approved reports and returns only type, description, state,
-  // lga, evidence and timestamp. Without a stable key React cannot list them
-  // and a selected incident can never be matched back to its card, so derive
-  // one from the fields that do identify it. The value is deterministic, so a
-  // poll that returns the same incident keeps its selection.
+  // An `_id` is assigned once and kept, so a selected incident stays selected
+  // across a filter change. The derivation is deterministic, which is what makes
+  // that possible without a server-provided key.
   const incidents = useMemo(
     () =>
-      (data || []).map((incident) => ({
+      INCIDENTS.map((incident) => ({
         ...incident,
         id: incident._id || incident.id || incidentKey(incident),
       })),
-    [data],
+    [],
   );
 
   const filtered = useMemo(() => {
@@ -103,11 +101,13 @@ export function useIncidents({ intervalMs = CONFIG.POLL_INTERVAL_MS } = {}) {
     markers,
     counts,
     availableStates,
-    isLoading,
-    error,
-    updatedAt,
-    refresh,
-    reload,
+    isLoading: false,
+    // No request, so there is no transport failure to surface. Everything that
+    // can still go wrong on this page is a render error, which React handles.
+    error: null,
+    updatedAt: null,
+    refresh: () => {},
+    reload: () => {},
     filters: { type, setType, state, setState, dateFrom, setDateFrom, dateTo, setDateTo, reset },
     view: { center: DEFAULT_CENTER, zoom: DEFAULT_ZOOM },
   };

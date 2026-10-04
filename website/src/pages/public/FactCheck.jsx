@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { AlertCircle, ImageIcon, Loader2, RotateCcw, Send } from "lucide-react";
 import { CONFIG } from "../../config/config";
-import { runFactCheck } from "../../services/api";
+import { runSampleFactCheck } from "../../data/demo-data";
 import { Container, PageHeader, SectionHeading } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Alert } from "../../components/shared/Field";
 import { Textarea } from "../../components/shared/Input";
 import { FileUpload } from "../../components/shared/FileUpload";
 import { VerdictCard, VerdictExplainer } from "../../components/sections/VerdictCard";
+import { SampleBanner } from "../../components/shared/SampleBanner";
 
 /**
  * A handful of real claims, offered as a starting point. A blank box is a
@@ -23,9 +24,16 @@ const EXAMPLES = [
 /**
  * Web fact-check.
  *
- * Runs the same pipeline the WhatsApp bot runs — this is not a lighter path.
- * The difference is only that the result renders here instead of arriving in a
- * chat thread.
+ * Runs locally against the sample index in ../../data/demo-data, in place of
+ * POST /api/factcheck, which had no server behind it on a static host. The shape
+ * of the page is the real one: same form, same four verdicts, same source list,
+ * so restoring the pipeline is a change of one import.
+ *
+ * The result is a sample verdict and the interface says so, both before the check
+ * runs and on the result itself. Presenting a canned answer as though a live
+ * retrieval pass had researched the claim would be the dishonest version of this
+ * feature, and on a fact-checking product that is not a tradeoff worth making for
+ * a better-looking demo.
  */
 export function FactCheck() {
   const [claim, setClaim] = useState("");
@@ -46,12 +54,10 @@ export function FactCheck() {
     setResult(null);
 
     try {
-      const data = await runFactCheck({
-        claim: claim.trim(),
-        caption: caption.trim(),
-        image: image || undefined,
-      });
-      setResult(data);
+      // Brief delay so the pending state is legible. The real pipeline takes
+      // seconds, and an instant result reads as a cached page rather than a check.
+      await new Promise((resolve) => setTimeout(resolve, 900));
+      setResult(runSampleFactCheck(claim.trim() || caption.trim() || "image"));
     } catch (err) {
       setError(err);
     } finally {
@@ -82,7 +88,15 @@ export function FactCheck() {
           />
         </div>
 
-        <div className="mx-auto mt-8 max-w-3xl">
+        <div className="mx-auto mt-6 max-w-3xl">
+          <SampleBanner>
+            No fact-checking server is connected to this deployment, so checks are answered
+            from a small bundled sample index. The verdict is not a real finding. Send the claim
+            to the bot to have it genuinely checked.
+          </SampleBanner>
+        </div>
+
+        <div className="mx-auto mt-4 max-w-3xl">
           <form onSubmit={submit} className="cs-card p-5" noValidate>
             <Textarea
               label="The claim"
@@ -142,7 +156,7 @@ export function FactCheck() {
             </div>
 
             <p className="cs-hint mt-3">
-              A check takes up to about 30 seconds. It searches a local index of Nigerian
+              A live check takes up to about 30 seconds. It searches a local index of Nigerian
               newsrooms and live search in parallel, then reads the evidence once.
             </p>
           </form>
@@ -269,6 +283,11 @@ function ResultPanel({ result, error, isRunning }) {
 
   return (
     <div className="cs-enter space-y-3">
+      <SampleBanner>
+        Sample verdict from the bundled index, not a real fact-check. Nothing here has been
+        independently verified.
+      </SampleBanner>
+
       <VerdictCard record={result} />
 
       {result.extractedClaim ? (
@@ -284,21 +303,40 @@ function ResultPanel({ result, error, isRunning }) {
         {result.structured?.sources?.length ? (
           <ul className="space-y-1.5">
             {result.structured.sources.map((source, index) => (
-              <li key={`${source.url}-${index}`}>
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-start gap-2 rounded-control p-1.5 transition-colors hover:bg-card-active"
-                >
-                  <AlertCircle size={12} className="mt-1 shrink-0 text-fg-faint" aria-hidden="true" />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm text-fg group-hover:text-brand-bright">
-                      {source.title}
+              <li key={`${source.title}-${index}`} className="p-1.5">
+                {source.url ? (
+                  <a
+                    href={source.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="group flex items-start gap-2 rounded-control transition-colors hover:bg-card-active"
+                  >
+                    <AlertCircle
+                      size={12}
+                      className="mt-1 shrink-0 text-fg-faint"
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-fg group-hover:text-brand-bright">
+                        {source.title}
+                      </span>
+                      <span className="block truncate text-2xs text-fg-faint">{source.site}</span>
                     </span>
-                    <span className="block truncate text-2xs text-fg-faint">{source.site}</span>
+                  </a>
+                ) : (
+                  // Named in the rule but absent from the registry. Shown, not
+                  // hidden, and marked, so the reader can see exactly how much of
+                  // the evidence is independently reachable.
+                  <span className="flex items-start gap-2">
+                    <AlertCircle size={12} className="mt-1 shrink-0 text-fg-faint" aria-hidden="true" />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-fg-secondary">
+                        {source.title}
+                      </span>
+                      <span className="block truncate text-2xs text-fg-faint">{source.site}</span>
+                    </span>
                   </span>
-                </a>
+                )}
               </li>
             ))}
           </ul>

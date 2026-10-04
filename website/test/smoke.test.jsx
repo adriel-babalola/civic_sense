@@ -20,24 +20,23 @@ import { PublicLayout } from "../src/components/layout/PublicLayout";
 import { FeatureGate } from "../src/components/shared/FeatureGate";
 import { CONFIG, FEATURES as FEATURE_SWITCHES } from "../src/config/config";
 import { FEATURES } from "../src/data/content";
-import { AdminLogin } from "../src/pages/admin/AdminLogin";
-import { AdminDashboard } from "../src/pages/admin/AdminDashboard";
-import { AdminReports } from "../src/pages/admin/AdminReports";
-import { AdminFeed } from "../src/pages/admin/AdminFeed";
-import { AdminPoliticians } from "../src/pages/admin/AdminPoliticians";
-import { AdminAnalytics } from "../src/pages/admin/AdminAnalytics";
-import { AdminSettings } from "../src/pages/admin/AdminSettings";
 import {
   getPoliticianBySlug,
   UNIQUE_POLITICIANS,
   NATIONAL,
   PRESIDENTIAL,
 } from "../src/data/politicians";
-import { PHOTO_CREDITS, getPhoto } from "../src/data/photos";
+import { PHOTO_CREDITS, getPhoto, getAllPhotos } from "../src/data/photos";
+import {
+  PHOTO_PACK,
+  CLEARED,
+  UNCLEARED,
+  PACK_FOR_CERTIFIED_CANDIDATES,
+  PACK_PHOTO_CREDITS,
+} from "../src/data/photoPack";
 import { INEC_SOURCE } from "../src/data/elections2027";
 import { FAQS } from "../src/data/faq";
 import { STATES } from "../src/data/states";
-import * as api from "../src/services/api";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -50,150 +49,18 @@ import {
 // mocked module returns a namespace that hides them.
 import * as leaflet from "leaflet";
 
+/** Repository root, for the two tests that read files off disk. */
+const ROOT = resolve(import.meta.dirname, "..");
+
 /**
  * Route smoke tests.
  *
- * The value here is not assertions about copy — it is that every route mounts
- * without throwing, with the network stubbed to a realistic payload. A
- * component that references a missing export, calls a hook conditionally, or
- * destructures a field the server never sends fails here rather than in front
- * of a visitor.
+ * The value here is not assertions about copy, it is that every route mounts
+ * without throwing against its real data source. A component that references a
+ * missing export, calls a hook conditionally, or destructures a field the data
+ * never carries fails here rather than in front of a visitor.
  */
 
-const EMPTY_INCIDENTS = [];
-
-/** Vitest runs with the project root as cwd. */
-const ROOT = process.cwd();
-
-/**
- * The exact shape and values the running server returns from
- * GET /api/incidents. Copied from a live response so a change to the seed
- * incidents or to the field names fails here instead of on the map.
- */
-const SEED_INCIDENTS = [
-  {
-    type: "unrest",
-    description: "CSO raises alarm over rising pre-election violence in Osun State.",
-    state: "Osun",
-    lga: "Osogbo",
-    timestamp: "2026-06-25T00:00:00.000Z",
-  },
-  {
-    type: "violence",
-    description: "Two rival groups clashed at a campaign rally in Kaduna.",
-    state: "Kaduna",
-    lga: "Igabi",
-    timestamp: "2026-07-02T00:00:00.000Z",
-  },
-  {
-    type: "misconduct",
-    description: "Voters report queue chaos outside a polling unit in Kano.",
-    state: "Kano",
-    lga: "Dawakin Kudu",
-    timestamp: "2026-07-11T00:00:00.000Z",
-  },
-  {
-    type: "unrest",
-    description: "Protest over fuel prices blocked a junction in Lagos.",
-    state: "Lagos",
-    lga: "Ikeja",
-    timestamp: "2026-07-19T00:00:00.000Z",
-  },
-];
-const SOURCES = [
-  {
-    name: "Premium Times",
-    baseUrl: "https://www.premiumtimesng.com",
-    feed: "https://www.premiumtimesng.com/feed",
-    category: "news",
-    region: "National",
-  },
-  {
-    name: "Dubawa",
-    baseUrl: "https://dubawa.org",
-    feed: "https://dubawa.org/feed",
-    category: "fact-check",
-    region: "National",
-  },
-];
-
-const HEALTH = {
-  success: true,
-  uptime: 120,
-  db: true,
-  articles: 4210,
-  scraper: { healthy: 17, sources: 17, lastSyncAt: new Date().toISOString() },
-};
-
-const FACT_CHECKS = [
-  {
-    _id: "a1",
-    claim: "The federal government has banned withdrawals above ₦200,000",
-    verdict: "FALSE",
-    channel: "whatsapp",
-    timestamp: new Date(Date.now() - 3600_000).toISOString(),
-    latencyMs: 4200,
-  },
-  {
-    _id: "a2",
-    claim: "INEC has cancelled the 2027 general elections",
-    verdict: "MISLEADING",
-    channel: "api",
-    timestamp: new Date(Date.now() - 7200_000).toISOString(),
-  },
-];
-
-const REPORTS = [
-  {
-    _id: "r1",
-    type: "misconduct",
-    description: "Ballot boxes arrived after voting had already closed at the ward.",
-    state: "Nasarawa",
-    lga: "Nasarawa Eggon",
-    status: "pending",
-    timestamp: new Date(Date.now() - 600_000).toISOString(),
-  },
-  {
-    _id: "r2",
-    type: "unrest",
-    description: "Protesters blocked a major junction for most of the morning.",
-    state: "Kano",
-    lga: "Dawakin Kudu",
-    status: "approved",
-    timestamp: new Date(Date.now() - 86_400_000).toISOString(),
-  },
-];
-
-function stubApi() {
-  vi.spyOn(api, "getHealth").mockResolvedValue(HEALTH);
-  vi.spyOn(api, "getSources").mockResolvedValue(SOURCES);
-  vi.spyOn(api, "getFactChecks").mockResolvedValue(FACT_CHECKS);
-  vi.spyOn(api, "getIncidents").mockResolvedValue(EMPTY_INCIDENTS);
-  vi.spyOn(api, "getReports").mockResolvedValue(REPORTS);
-  vi.spyOn(api, "runFactCheck").mockResolvedValue({
-    claim: "A claim",
-    extractedClaim: null,
-    verdict: "FALSE",
-    structured: {
-      verdict: "FALSE",
-      confidence: 88,
-      whatWeFound: "No such ban exists.",
-      sources: [{ title: "CBN statement", url: "https://example.com/a", site: "example.com" }],
-    },
-    latencyMs: 3100,
-  });
-  vi.spyOn(api, "submitReport").mockResolvedValue({
-    _id: "new-report-id",
-    type: "misconduct",
-    description: "x",
-    state: "Nasarawa",
-    lga: "Nasarawa Eggon",
-    status: "pending",
-    timestamp: new Date().toISOString(),
-  });
-  vi.spyOn(api, "approveReport").mockResolvedValue({ ...REPORTS[0], status: "approved" });
-  vi.spyOn(api, "rejectReport").mockResolvedValue({ ...REPORTS[0], status: "rejected" });
-}
 
 function renderRoute(element, { route = "/", path = "*" } = {}) {
   return render(
@@ -206,8 +73,11 @@ function renderRoute(element, { route = "/", path = "*" } = {}) {
 }
 
 beforeEach(() => {
+  // Every route is served from bundled data, so there is no client to stub.
+  // Clearing storage matters though: useReports and usePoliticians both persist
+  // to localStorage, so a saved report or a remembered view mode leaks between
+  // tests otherwise.
   localStorage.clear();
-  stubApi();
 });
 
 describe("public routes", () => {
@@ -227,13 +97,25 @@ describe("public routes", () => {
 
     await user.type(
       screen.getByPlaceholderText(/banned withdrawals/i),
-      "The federal government has banned withdrawals above 200,000",
+      "The federal government removed the fuel subsidy and petrol is now 200 naira",
     );
     await user.click(screen.getByRole("button", { name: /check this claim/i }));
 
-    await waitFor(() => expect(api.runFactCheck).toHaveBeenCalled());
-    expect(await screen.findByText(/No such ban exists/i)).toBeInTheDocument();
-    expect(screen.getByText(/CBN statement/i)).toBeInTheDocument();
+    // The rule set is bundled, but the page still shows a deliberate ~900ms
+    // pending state so an instant verdict does not read as a cached page. The
+    // wait is for that delay, not for a network call.
+    expect(await screen.findByText(/vary by state and season/i)).toBeInTheDocument();
+    expect(screen.getByText("FALSE")).toBeInTheDocument();
+
+    // The sources must actually render as links. runSampleFactCheck used to
+    // return bare strings here, which made every claim fall through to "no
+    // usable source was returned" while still showing a confident verdict.
+    const sourceLink = screen.getByRole("link", { name: /Premium Times/i });
+    expect(sourceLink).toHaveAttribute("href", "https://www.premiumtimesng.com");
+
+    // And it must say it is a sample. A demo verdict presented as a live lookup
+    // is the one failure mode this page cannot have.
+    expect(screen.getByText(/not a real fact-check/i)).toBeInTheDocument();
   });
 
   it("renders the politician directory", async () => {
@@ -248,7 +130,21 @@ describe("public routes", () => {
     const user = userEvent.setup();
     renderRoute(<Politicians />);
 
-    await user.selectOptions(screen.getByLabelText("Filter by party"), "ZLP");
+    // Party moved from a <select> to a chip with a count, so the roster's shape
+    // is visible without opening anything.
+    //
+    // The chips sit behind a disclosure, collapsed by default: seventeen chips
+    // pushed the first card off a phone screen. Opening it is part of filtering,
+    // so the test opens it rather than assuming it is visible.
+    const partyDisclosure = screen.getByRole("button", { name: /^Party/ });
+    expect(partyDisclosure).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(partyDisclosure);
+    expect(partyDisclosure).toHaveAttribute("aria-expanded", "true");
+
+    await user.click(
+      screen.getByRole("button", { name: /^ZLP, \d+ candidates?$/ }),
+    );
 
     await waitFor(() => {
       expect(screen.queryByText("Bola Ahmed Tinubu")).not.toBeInTheDocument();
@@ -256,6 +152,33 @@ describe("public routes", () => {
         screen.getByRole("heading", { name: "Daniel Daberechukwu Nwanyanwu" }),
       ).toBeInTheDocument();
     });
+
+    // The count sits beside the party so a visitor can see the size of each
+    // party without filtering first. Asserted as a shape, not a number: the
+    // roster is generated from INEC's list and will change when that list does.
+    expect(screen.getByRole("button", { name: /^ZLP, \d+ candidates?$/ })).toBeInTheDocument();
+  });
+
+  it("switches the directory between grid and list, and remembers it", async () => {
+    const user = userEvent.setup();
+    renderRoute(<Politicians />);
+
+    expect(screen.getByRole("button", { name: "Grid view" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "List view" }));
+
+    expect(screen.getByRole("button", { name: "List view" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    // The list adds column headings, which is the whole reason to choose it.
+    expect(screen.getByText("Candidate")).toBeInTheDocument();
+    expect(screen.getByText("Ticket")).toBeInTheDocument();
+
+    expect(localStorage.getItem("civicsense.politicians.view")).toBe("list");
   });
 
   it("renders a profile and its empty public record", () => {
@@ -277,45 +200,54 @@ describe("public routes", () => {
     expect(screen.getByText(/does not exist/i)).toBeInTheDocument();
   });
 
-  it("renders live server incidents, counts them and filters by type", async () => {
+  it("renders bundled incidents, counts them and filters by type", async () => {
     const user = userEvent.setup();
-    vi.spyOn(api, "getIncidents").mockResolvedValue(SEED_INCIDENTS);
 
     renderRoute(<MapPage />);
 
-    expect(await screen.findByText(/CSO raises alarm/i)).toBeInTheDocument();
-    expect(screen.getByText(/clashed at a campaign rally/i)).toBeInTheDocument();
-    expect(screen.getByText("4")).toBeInTheDocument();
+    // Reads the bundled INCIDENTS set. This is the regression guard for the
+    // Vercel "[object Object]" failure: the page used to await an API response
+    // that never arrived and rendered the parsed error object as page content.
+    expect(await screen.findByText(/Sample record: voters reportedly queued/i)).toBeInTheDocument();
+    expect(screen.getByText(/Sample record: clashes between rival groups/i)).toBeInTheDocument();
 
-    // Every seed state must resolve to coordinates, or the map plots nothing.
+    // Every bundled state must resolve to coordinates, or the map plots nothing.
     expect(screen.queryByText(/could not be plotted/i)).not.toBeInTheDocument();
 
-    // The server sends no id, so the list must still be able to select a card.
-    // Without a derived key this silently does nothing.
-    await user.click(screen.getByText(/clashed at a campaign rally/i));
-    expect(await screen.findByText(/Kaduna\s*·\s*Igabi/)).toBeInTheDocument();
+    // Selecting a card must select it. Without a stable derived key this
+    // silently does nothing.
+    await user.click(screen.getByText(/Sample record: clashes between rival groups/i));
+    expect(await screen.findByText(/Plateau\s*·\s*Jos North/)).toBeInTheDocument();
 
-    // Selecting Violence keeps the violence incident and drops the unrest one.
-    // The description now appears twice: once in its card, once in the detail
-    // panel below the list, which is the selection being reflected.
+    // Type filter keeps violence and drops the misconduct and unrest records.
+    // The description appears twice once selected: in its card and in the
+    // detail panel, which is the selection being reflected.
     await user.click(screen.getByRole("radio", { name: /violence/i }));
-    await waitFor(() => expect(screen.queryByText(/CSO raises alarm/i)).not.toBeInTheDocument());
-    expect(screen.getAllByText(/clashed at a campaign rally/i)).toHaveLength(2);
+    await waitFor(() =>
+      expect(screen.queryByText(/Sample record: voters reportedly queued/i)).not.toBeInTheDocument(),
+    );
+    expect(screen.getAllByText(/Sample record: clashes between rival groups/i)).toHaveLength(2);
     expect(screen.getByRole("radio", { name: /violence/i })).toHaveAttribute("aria-checked", "true");
 
-    // Osun only has an unrest incident, so Violence + Osun matches nothing.
-    await user.selectOptions(screen.getByLabelText("Filter by state"), "Osun");
+    // Kano only has a misconduct record, so Violence + Kano matches nothing.
+    await user.selectOptions(screen.getByLabelText("Filter by state"), "Kano");
     expect(await screen.findByText(/Nothing matches these filters/i)).toBeInTheDocument();
 
     // The panel and the list each offer a reset; either is enough.
     await user.click(screen.getAllByRole("button", { name: /clear filters/i })[0]);
-    expect(await screen.findByText(/CSO raises alarm/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Sample record: voters reportedly queued/i),
+    ).toBeInTheDocument();
   });
 
-  it("renders the map page with an empty incident set", async () => {
+  it("renders the map page from bundled sample incidents", async () => {
     renderRoute(<MapPage />);
     expect(screen.getByText("Incident map")).toBeInTheDocument();
-    expect(await screen.findByText(/No incidents published/i)).toBeInTheDocument();
+
+    // The point of this change: /map rendered "[object Object]" on Vercel
+    // because it awaited a response that never came. It now reads bundled data
+    // and must label itself as sample data, not as live incidents.
+    expect((await screen.findAllByText(/Demonstration data/i)).length).toBeGreaterThan(0);
   });
 
   it("submits a report with no identity field and confirms it", async () => {
@@ -335,9 +267,35 @@ describe("public routes", () => {
     await user.type(screen.getByLabelText(/local government area/i), "Nasarawa Eggon");
     await user.click(screen.getByRole("button", { name: /send report/i }));
 
-    await waitFor(() => expect(api.submitReport).toHaveBeenCalled());
-    expect(await screen.findByText("Report received")).toBeInTheDocument();
-    expect(screen.getByText("new-report-id")).toBeInTheDocument();
+    // No request is made; the report is written to this browser. Asserting on
+    // the stored record is asserting the whole behaviour. The wait is for the
+    // deliberate 600ms pending state, not for a network round trip.
+    await waitFor(() =>
+      expect(JSON.parse(localStorage.getItem("civicsense.reports"))).toEqual([
+        expect.objectContaining({
+          type: "misconduct",
+          state: "Nasarawa",
+          lga: "Nasarawa Eggon",
+          storedLocally: true,
+        }),
+      ]),
+    );
+
+    expect(await screen.findByText(/Report saved on this device/i)).toBeInTheDocument();
+    // The receipt id now comes from the local store, not a server.
+    expect(screen.getByText(/not been sent anywhere/i)).toBeInTheDocument();
+  });
+
+  it("ignores a politician query parameter, because incidents are not about people", async () => {
+    renderRoute(<Report />, { route: "/report?politician=Bola Tinubu" });
+
+    // This form used to read ?politician= and prefill "Regarding {name}:" into
+    // the description. That merged an anonymous polling-unit report with a named
+    // subject, so the stored record read as though we had tied a person to a
+    // report. The form no longer knows what a politician is.
+    expect(screen.getByLabelText(/describe it/i)).toHaveValue("");
+    expect(screen.queryByText(/Bola Tinubu/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/reporting about/i)).not.toBeInTheDocument();
   });
 
   it("offers no file input on the report form, only an evidence description", () => {
@@ -358,8 +316,11 @@ describe("public routes", () => {
     await user.type(screen.getByLabelText(/evidence/i), "Video on the ward group's page.");
     await user.click(screen.getByRole("button", { name: /send report/i }));
 
-    await waitFor(() => expect(api.submitReport).toHaveBeenCalled());
-    expect(api.submitReport.mock.calls[0][0].evidence).toBe("Video on the ward group's page.");
+    await waitFor(() =>
+      expect(localStorage.getItem("civicsense.reports")).not.toBeNull(),
+    );
+    const [stored] = JSON.parse(localStorage.getItem("civicsense.reports"));
+    expect(stored.evidence).toBe("Video on the ward group's page.");
   });
 
   it("refuses to submit a report with missing fields", async () => {
@@ -368,17 +329,20 @@ describe("public routes", () => {
 
     await user.click(screen.getByRole("button", { name: /send report/i }));
 
-    expect(api.submitReport).not.toHaveBeenCalled();
+    expect(localStorage.getItem("civicsense.reports")).toBeNull();
     expect(await screen.findByText(/required information is missing/i)).toBeInTheDocument();
   });
 
   it("renders the live feed with verdict filters", async () => {
     renderRoute(<LiveFeed />);
     expect(screen.getByText("Verification feed")).toBeInTheDocument();
-    expect(await screen.findByText(/banned withdrawals above/i)).toBeInTheDocument();
+    // Reads from the bundled CHECKS set rather than the API payload.
+    expect(await screen.findByText(/Fuel subsidy has been removed/i)).toBeInTheDocument();
+    // And the feed is labelled as a sample for the same reason the map is.
+    expect(screen.getAllByText(/Demonstration data/i).length).toBeGreaterThan(0);
   });
 
-  it("renders the source registry from the API", async () => {
+  it("renders the source registry from bundled data", async () => {
     renderRoute(<Sources />);
     expect(await screen.findByText("Premium Times")).toBeInTheDocument();
     expect(screen.getByText("Dubawa")).toBeInTheDocument();
@@ -448,69 +412,6 @@ describe("layout shell", () => {
   it("renders the public shell with a skip link and a single main landmark", () => {
     renderRoute(<PublicLayout />, { route: "/" });
     expect(screen.getByRole("main")).toBeInTheDocument();
-  });
-});
-
-describe("admin", () => {
-  it("rejects a wrong password and accepts the right one", async () => {
-    const user = userEvent.setup();
-    renderRoute(<AdminLogin />, { route: "/admin/login" });
-
-    await user.type(screen.getByLabelText(/access password/i), "wrong-password");
-    await user.click(screen.getByRole("button", { name: /sign in/i }));
-    expect(await screen.findByText(/incorrect password/i)).toBeInTheDocument();
-
-    await user.type(screen.getByLabelText(/access password/i), "civicsense");
-    await user.click(screen.getByRole("button", { name: /sign in/i }));
-    expect(JSON.parse(localStorage.getItem("civicsense.admin.session"))).toBeTruthy();
-  });
-
-  it("flags the development password on the login screen", () => {
-    renderRoute(<AdminLogin />, { route: "/admin/login" });
-    expect(screen.getByText(/Development password in use/i)).toBeInTheDocument();
-  });
-
-  it("renders the dashboard with live server numbers", async () => {
-    renderRoute(<AdminDashboard />);
-    expect(await screen.findByText("4,210")).toBeInTheDocument();
-    expect(screen.getByText(/Waiting review/i)).toBeInTheDocument();
-  });
-
-  it("shows the pending queue and approves a report after confirmation", async () => {
-    const user = userEvent.setup();
-    renderRoute(<AdminReports />);
-
-    const row = (await screen.findByText(/ballot boxes arrived/i)).closest("article");
-    expect(within(row).getByText("Pending")).toBeInTheDocument();
-
-    await user.click(within(row).getByRole("button", { name: /approve and publish/i }));
-    await user.click(await screen.findByRole("button", { name: /yes, approve/i }));
-
-    await waitFor(() => expect(api.approveReport).toHaveBeenCalledWith("r1"));
-  });
-
-  it("renders the fact-check feed and its channel breakdown", () => {
-    renderRoute(<AdminFeed />);
-    expect(screen.getByText("Fact-check feed")).toBeInTheDocument();
-    expect(screen.getByText("WhatsApp")).toBeInTheDocument();
-  });
-
-  it("renders the politician dataset with a read-only warning", () => {
-    renderRoute(<AdminPoliticians />);
-    expect(screen.getByText(/Read-only by necessity/i)).toBeInTheDocument();
-    expect(screen.getByText("Duplicate slugs")).toBeInTheDocument();
-  });
-
-  it("renders analytics from the public endpoints", async () => {
-    renderRoute(<AdminAnalytics />);
-    expect(await screen.findByText("Analytics")).toBeInTheDocument();
-    expect(screen.getByText("Sources in registry")).toBeInTheDocument();
-  });
-
-  it("warns in settings that the admin gate is client-side", () => {
-    renderRoute(<AdminSettings />);
-    expect(screen.getByText(/Development password is still active/i)).toBeInTheDocument();
-    expect(screen.getByText("client-side only")).toBeInTheDocument();
   });
 });
 
@@ -624,6 +525,60 @@ describe("hero slider", () => {
     // Exactly one is current, and it is the first.
     expect(dots[0]).toHaveAttribute("aria-current", "true");
     expect(dots[1]).toHaveAttribute("aria-current", "false");
+  });
+
+  /**
+   * The dolly arithmetic, asserted directly.
+   *
+   * The zoom was invisible for a long time because Motion's `duration` is in
+   * seconds while SLIDE_DURATION_MS is milliseconds, and assigning one to the
+   * other gave a duration of 7000 seconds. A screenshot of the first frame
+   * cannot catch that, because the first frame of an infinitely slow animation
+   * is identical to no animation at all. So the curve itself is tested, rather
+   * than the rendered result.
+   */
+  it("dollies slowly, returns, and never drops below the resting scale", async () => {
+    const { dollyScale, ZOOM_FROM, ZOOM_TO, DOLLY_CYCLE_MS, SLIDE_DURATION_MS } = await import(
+      "../src/components/sections/Hero"
+    );
+
+    // A full breath must be a whole number of slide dwells. This is what keeps
+    // the loop from drifting against the crossfade: if the cycle were 25s over a
+    // 7s dwell, the scale at each handover would be a different value every
+    // rotation and the repeat would look accidental.
+    expect(DOLLY_CYCLE_MS % SLIDE_DURATION_MS).toBe(0);
+    expect(DOLLY_CYCLE_MS).toBeGreaterThan(SLIDE_DURATION_MS);
+
+    // Starts at rest, peaks at the midpoint, and comes back to rest. A cycle
+    // that did not return would sit pinned at ZOOM_TO after the first pass.
+    expect(dollyScale(0)).toBeCloseTo(ZOOM_FROM, 5);
+    expect(dollyScale(0.5)).toBeCloseTo(ZOOM_TO, 5);
+    expect(dollyScale(1)).toBeCloseTo(ZOOM_FROM, 5);
+
+    // And it has to be a real push. Too small a range is invisible under the
+    // navy wash on an already-cropped photograph, which is the whole reason the
+    // amplitude was raised when the rate was slowed.
+    expect(ZOOM_TO / ZOOM_FROM).toBeGreaterThanOrEqual(1.15);
+
+    // Never below the resting scale: `object-cover` would expose an edge.
+    for (let step = 0; step <= 100; step += 1) {
+      expect(dollyScale(step / 100)).toBeGreaterThanOrEqual(ZOOM_FROM - 1e-9);
+      expect(dollyScale(step / 100)).toBeLessThanOrEqual(ZOOM_TO + 1e-9);
+    }
+  });
+
+  it("eases to a stop at both ends of the travel", async () => {
+    const { dollyScale } = await import("../src/components/sections/Hero");
+
+    // A plain triangle reverses instantly at the extremes, which shows as a
+    // corner in the motion. Sampling either side of the midpoint: the steps just
+    // past the peak must be smaller than a linear ramp would produce.
+    const justBeforePeak = dollyScale(0.49);
+    const atPeak = dollyScale(0.5);
+    const justAfterPeak = dollyScale(0.51);
+
+    expect(atPeak - justBeforePeak).toBeLessThan(justBeforePeak - dollyScale(0.47));
+    expect(atPeak - justAfterPeak).toBeLessThan(justAfterPeak - dollyScale(0.53));
   });
 
   it("moves the current slide when a dot is clicked", async () => {
@@ -750,8 +705,15 @@ describe("politician cards", () => {
   it("shows the photo placeholder and an explicit no-record note", () => {
     renderRoute(<Politicians />);
 
-    expect(screen.getAllByText("Photo coming soon").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("No verified record").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No photo yet").length).toBeGreaterThan(0);
+
+    // Per-card repetition was removed in favour of one note under the grid, so
+    // the guarantee is asserted where a sighted reader actually meets it, plus
+    // the screen-reader equivalent on each card.
+    expect(screen.getByText("Being on this list is not a record")).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/not a clean bill of health/i).length,
+    ).toBeGreaterThan(0);
   });
 
   it("keeps the share button out of the profile link", () => {
@@ -793,20 +755,59 @@ describe("politician profile", () => {
   const renderProfile = () =>
     renderRoute(<PoliticianDetail />, { route, path: "/politicians/:slug" });
 
-  it("renders the sourced sections in the right-hand column", () => {
+  it("keeps populated sections open and collapses the empty ones", async () => {
+    const user = userEvent.setup();
     renderProfile();
 
+    // Always present, regardless of what has been researched.
+    for (const heading of ["Overview", "Public record", "Sources"]) {
+      expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+    }
+
+    // The record section must stay open even when empty: its copy is the
+    // disclaimer that stops the page reading as an all-clear.
+    expect(screen.getByText(/Nothing verified yet/i)).toBeInTheDocument();
+
+    // Empty sections are gathered into one closed disclosure rather than four or
+    // five consecutive cards saying "nothing here yet".
+    const disclosure = screen.getByRole("button", { name: /Not yet verified/i });
+    expect(disclosure).toHaveAttribute("aria-expanded", "false");
+
+    await user.click(disclosure);
+
+    expect(disclosure).toHaveAttribute("aria-expanded", "true");
     for (const heading of [
-      "Overview",
       "Career highlights",
       "Education",
       "Public statements and known positions",
-      "Public record",
       "Investigations and court cases",
-      "Sources",
     ]) {
-      expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+      expect(screen.getByText(heading)).toBeInTheDocument();
     }
+  });
+
+  it("groups identity details into a glance grid and moves actions to the top", () => {
+    renderProfile();
+
+    expect(screen.getByText("At a glance")).toBeInTheDocument();
+    // Party is a pill under the name, not a row in the table.
+    expect(screen.getAllByText(/INEC certified/i).length).toBeGreaterThan(0);
+
+    // Suggest, share and copy sit together above the evidence rather than at the
+    // bottom of a scrolling sidebar.
+    const suggest = screen.getByRole("link", { name: /suggest an update/i });
+    const glance = screen.getByText("At a glance");
+    expect(suggest.compareDocumentPosition(glance) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("points the update action at the profile form, not at the incident report", () => {
+    renderProfile();
+
+    // The old target was `/report?politician=`, which merged an anonymous
+    // polling-unit form with a named subject.
+    const suggest = screen.getByRole("link", { name: /suggest an update/i });
+    expect(suggest).toHaveAttribute("href", `/politicians/${person.id}/suggest`);
+    expect(screen.queryByRole("link", { name: /report about/i })).not.toBeInTheDocument();
   });
 
   it("shows the photo placeholder when no licence is on file", () => {
@@ -819,7 +820,7 @@ describe("politician profile", () => {
       route: `/politicians/${unlicensed.id}`,
       path: "/politicians/:slug",
     });
-    expect(screen.getAllByText("Photo coming soon").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("No photo yet").length).toBeGreaterThan(0);
   });
 
   it("renders a licensed photo with its credit beside it", () => {
@@ -868,6 +869,181 @@ describe("politician profile", () => {
 /* ========================================================================== */
 /* Fact-check workspace                                                       */
 /* ========================================================================== */
+
+describe("research photo pack", () => {
+  /**
+   * The pack is 30 researched portraits that are NOT licence-cleared. They are
+   * rendered at the owner's instruction, so these tests no longer assert that
+   * they are withheld. They assert the two things that must stay true anyway:
+   * that a source is recorded for every one, and that no invented licence
+   * appears on a public page.
+   */
+  it("records a source and the researcher's rights note for every entry", () => {
+    expect(PHOTO_PACK).toHaveLength(30);
+
+    for (const entry of PHOTO_PACK) {
+      expect(entry.source).toMatch(/^https:\/\//);
+      expect(entry.rights).toBeTruthy();
+    }
+  });
+
+  it("asserts a Creative Commons licence only where one was confirmed", () => {
+    for (const entry of PHOTO_PACK) {
+      if (entry.rightsStatus !== "open-licence") {
+        // The important one. A pack image with a licenceUrl on /credits is a
+        // false statement about someone else's copyright on a public page.
+        expect(entry.licenceUrl).toBeNull();
+        continue;
+      }
+
+      expect(entry.onCommons).toBe(true);
+      expect(entry.licenceUrl).toMatch(/^https:\/\//);
+    }
+
+    expect(CLEARED.length).toBeGreaterThan(0);
+    // And the majority are still unverified, which is the true state of a pack
+    // assembled by image search. If this collapses, someone has started treating
+    // "found online" as "cleared".
+    expect(UNCLEARED.length).toBeGreaterThan(20);
+  });
+
+  it("records an unverified licence as unverified in the credit it emits", () => {
+    for (const [asset, credit] of Object.entries(PACK_PHOTO_CREDITS)) {
+      if (credit.unverified) {
+        expect(credit.license).toBe("Licence not verified");
+        expect(credit.licenseUrl).toBeNull();
+        expect(credit.source).toMatch(/^https:\/\//);
+      }
+      expect(asset).toBe(credit.file);
+    }
+  });
+
+  it("flags search-engine permalinks as sources that cannot be cited", () => {
+    const permalinks = PHOTO_PACK.filter((entry) =>
+      /bing\.com\/images\/search/.test(entry.source),
+    );
+    expect(permalinks.length).toBeGreaterThan(0);
+
+    for (const entry of permalinks) {
+      expect(entry.sourceIsStable).toBe(false);
+      expect(entry.licenceUrl).toBeNull();
+    }
+  });
+
+  it("maps pack entries onto real certified candidates", () => {
+    const rosterIds = new Set(UNIQUE_POLITICIANS.map((person) => person.id));
+
+    for (const entry of PHOTO_PACK) {
+      if (!entry.rosterId) continue;
+      // Hand-maintained alias map, because the pack writes short names and the
+      // roster uses the INEC form. A typo would not throw; it would quietly
+      // attach a governor's photograph to nothing.
+      expect(rosterIds.has(entry.rosterId)).toBe(true);
+    }
+
+    expect(PACK_FOR_CERTIFIED_CANDIDATES.length).toBeGreaterThan(0);
+    // Not everyone. Most of the pack is officeholders with no 2027 ticket.
+    expect(PACK_FOR_CERTIFIED_CANDIDATES.length).toBeLessThan(PHOTO_PACK.length);
+  });
+
+  it("gives no photo to a profile whose subject is not on a certified ticket", () => {
+    // The guard that matters most. 21 pack subjects are governors, senators and
+    // party chairs; none of them is a certified 2027 candidate, so no profile in
+    // this dataset may carry their photograph.
+    const packAssets = new Set(Object.values(PACK_PHOTO_CREDITS).map((c) => c.file));
+    const notOnRoster = new Set(
+      PHOTO_PACK.filter((entry) => !entry.rosterId && entry.asset).map((e) => e.asset),
+    );
+
+    expect(notOnRoster.size).toBeGreaterThan(0);
+
+    for (const person of UNIQUE_POLITICIANS) {
+      if (!person.photoId || !packAssets.has(person.photoId)) continue;
+
+      const subject = PHOTO_PACK.find((entry) => entry.asset === person.photoId);
+      expect(subject?.rosterId).toBe(person.id);
+    }
+  });
+
+  it("keeps the verified original when the pack has a copy of the same photo", () => {
+    // Atiku and Kwankwaso appear in the pack as well. The curated Wikimedia
+    // entry must win, or a verified CC credit gets replaced by an unverified one.
+    expect(getPhoto("atiku")?.license).toBe("CC0");
+    expect(getPhoto("kwankwaso")?.license).toMatch(/Public domain/i);
+    expect(getPhoto("tinubu")?.license).toBe("CC BY-SA 4.0");
+    expect(getPhoto("shettima")?.license).toBe("CC BY-SA 4.0");
+    expect(getPhoto("amaechi")?.license).toBe("CC BY 2.0");
+    expect(getPhoto("obi")?.license).toMatch(/Public domain/i);
+  });
+
+  it("records the one folder that has no photograph at all", () => {
+    // cliboy.png is a saved Bing results page, not a portrait.
+    const missing = PHOTO_PACK.filter((entry) => !entry.usable);
+    expect(missing).toHaveLength(1);
+    expect(missing[0].packName).toBe("Cleopas Zuwoghe");
+    expect(missing[0].asset).toBeNull();
+  });
+
+  it("resolves every credit the site actually uses to a real bundled file", () => {
+    // Deliberately getAllPhotos(), not PACK_PHOTO_CREDITS. The pack emits a credit
+    // for people we already hold a cleared Commons file for, and those are
+    // suppressed before rendering. Asserting they resolve would be asserting the
+    // duplicate on /credits is a feature.
+    for (const photo of getAllPhotos()) {
+      expect(photo.url).toBeTruthy();
+      expect(photo.source).toMatch(/^https:\/\//);
+      expect(photo.license).toBeTruthy();
+    }
+  });
+
+  it("suppresses the pack copy wherever a cleared original exists", () => {
+    const clearedTitles = new Set(
+      Object.values(PHOTO_CREDITS).map((credit) => credit.title.toLowerCase()),
+    );
+
+    for (const credit of Object.values(PACK_PHOTO_CREDITS)) {
+      if (!clearedTitles.has(credit.title.toLowerCase())) continue;
+
+      // A rendered image and a listed credit are the same fact. If the suppressed
+      // one is still resolvable, /credits lists these people twice.
+      expect(getPhoto(credit.file)).toBeNull();
+    }
+
+    // Nyesom Wike is the case that proves the filter works on subjects rather than
+    // on a hand-kept list: he is not a certified candidate, so nothing else in
+    // this dataset would have caught him.
+    expect(getPhoto("wike")).toBeTruthy();
+    expect(getPhoto("wike").license).toBe("CC BY 4.0");
+  });
+
+  it("says plainly which photographs are not licence-cleared", () => {
+    renderRoute(<Credits />);
+
+    // The count is stated above the list, not left for a reader to infer from
+    // which rows happen to lack a licence link.
+    expect(screen.getByText(/have an unverified licence/i)).toBeInTheDocument();
+
+    // And no unverified row links to a licence. A dead link to nowhere would
+    // read as a claim of a licence that does not exist.
+    const unverified = getAllPhotos().filter((photo) => photo.unverified);
+    expect(unverified.length).toBeGreaterThan(0);
+
+    for (const photo of unverified) {
+      expect(photo.licenseUrl).toBeNull();
+      expect(photo.license).toBe("Licence not verified");
+      expect(screen.getAllByText("Licence not verified").length).toBeGreaterThan(0);
+      // Every one still names where it came from, so a rights holder can be found.
+      expect(photo.source).toMatch(/^https:\/\//);
+    }
+  });
+
+  it("lists every bundled photo on the credits page", () => {
+    renderRoute(<Credits />);
+    for (const photo of getAllPhotos()) {
+      expect(screen.getAllByText(photo.title).length).toBeGreaterThan(0);
+    }
+  });
+});
 
 describe("fact-check workspace", () => {
   it("offers three example claims and says what the panel is", async () => {

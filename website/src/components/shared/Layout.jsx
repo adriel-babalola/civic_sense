@@ -64,10 +64,22 @@ export function SectionHeading({ eyebrow, title, description, align = "left", ac
   );
 }
 
-/** Standard page title block. */
+/**
+ * Standard page title block.
+ *
+ * The rule under the header was removed. It was here because most pages used to
+ * end their header block there and needed something to close the block, but it
+ * turned out to be doing the opposite on the pages with a control directly
+ * underneath: a full-width rule 8px above a filter bar reads as a divider
+ * between two halves of one thing, and makes the gap look like an accident.
+ *
+ * `pb-6` stays. The header still needs to breathe before whatever follows it,
+ * it just no longer draws a line under itself. Pass `className` if a page wants
+ * a different rhythm.
+ */
 export function PageHeader({ eyebrow, title, description, action, className, children }) {
   return (
-    <div className={cn("border-b border-line pb-6", className)}>
+    <div className={cn("pb-6", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-2xl">
           {eyebrow ? <p className="cs-eyebrow mb-2.5">{eyebrow}</p> : null}

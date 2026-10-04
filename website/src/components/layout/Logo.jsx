@@ -26,7 +26,14 @@ export function LogoMark({ className, ...props }) {
   );
 }
 
-/** Full wordmark. `compact` drops the tagline for the admin header. */
+/**
+ * Full wordmark.
+ *
+ * The tagline sits after a middot, so it reads as a second clause of the name
+ * rather than as a button. It was "verify what you forward", which described a
+ * feature; it is now "Truth awareness. Vote informed.", which is the two things
+ * the product is actually for.
+ */
 export function Logo({ compact = false, className, markClassName, textClassName, ...props }) {
   return (
     <span className={cn("inline-flex items-center gap-2.5", className)} {...props}>
@@ -35,7 +42,9 @@ export function Logo({ compact = false, className, markClassName, textClassName,
         CivicSense
       </span>
       {!compact ? (
-        <span className="hidden text-[0.8125rem] text-fg-muted xl:inline">· verify what you forward</span>
+        <span className="hidden text-[0.8125rem] text-fg-muted xl:inline">
+          · Truth awareness. Vote informed.
+        </span>
       ) : null}
     </span>
   );

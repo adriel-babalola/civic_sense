@@ -3,29 +3,39 @@ import { Github, Mail, MessageCircle } from "lucide-react";
 import { CONFIG } from "../../config/config";
 import { Logo } from "./Logo";
 
+/**
+ * Footer link groups.
+ *
+ * Grouped by what a visitor is trying to do rather than by product area, so the
+ * two secondary civic surfaces sit under one "Civic data" heading here for the
+ * same reason they share one dropdown in the header. Anything a visitor is
+ * actively looking for — where the verdicts come from, how to reach us, what we
+ * will not collect — is one click from the bottom of every page.
+ */
 const COLUMNS = [
   {
-    heading: "Product",
+    heading: "Check something",
     links: [
       { to: "/fact-check", label: "Check a claim" },
-      { to: "/politicians", label: "Politician records" },
-      { to: "/map", label: "Incident map" },
-      { to: "/live", label: "Live verdicts" },
-    ],
-  },
-  {
-    heading: "Take part",
-    links: [
-      { to: "/report", label: "Report misconduct" },
-      { to: "/about", label: "About CivicSense" },
+      { to: "/live", label: "Live verification feed" },
       { to: "/sources", label: "Where we check" },
+      { to: "/faq", label: "Questions and answers" },
     ],
   },
   {
-    heading: "Trust",
+    heading: "Civic data",
     links: [
-      { to: "/privacy", label: "Privacy" },
-      { to: "/faq", label: "FAQ" },
+      { to: "/politicians", label: "2027 presidential candidates" },
+      { to: "/map", label: "Incident map" },
+      { to: "/report", label: "Report what you saw" },
+    ],
+  },
+  {
+    heading: "About us",
+    links: [
+      { to: "/about", label: "About CivicSense" },
+      { to: "/privacy", label: "Privacy policy" },
+      { to: "/credits", label: "Photo and data credits" },
     ],
   },
 ];
@@ -37,6 +47,11 @@ export function Footer() {
     <footer className="border-t border-line bg-sunken">
       <div className="cs-container py-12">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+          {/* Identity column. The wordmark is a static brand lockup, not a
+              disclosure: the group headings beside it already expand to reveal
+              every link on desktop and mobile alike, so making the name toggle
+              anything too would be a second, redundant way to reach the same
+              list. Nothing here is hidden at any width. */}
           <div className="lg:col-span-2">
             <Logo />
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-fg-muted">

@@ -1,15 +1,14 @@
 import { useMemo, useState } from "react";
 import { Radio } from "lucide-react";
-import { getFactChecks } from "../../services/api";
-import { useAsync } from "../../hooks/useAsync";
+import { CHECKS, SAMPLE_NOTICE } from "../../data/demo-data";
 import { CONFIG } from "../../config/config";
 import { ALL, VERDICTS, VERDICT_META } from "../../utils/constants";
-import { Container, PageHeader, ErrorState, EmptyState, NoResults } from "../../components/shared/Layout";
+import { Container, PageHeader, EmptyState, NoResults } from "../../components/shared/Layout";
 import { SegmentedControl } from "../../components/shared/Input";
 import { LiveBadge } from "../../components/shared/Badge";
 import { VerdictRow } from "../../components/sections/VerdictCard";
-import { Skeleton } from "../../components/shared/Skeleton";
-import { countVerdicts, relativeTime } from "../../utils/formatters";
+import { SampleBanner } from "../../components/shared/SampleBanner";
+import { countVerdicts } from "../../utils/formatters";
 
 /**
  * Live verdict feed.
@@ -22,12 +21,9 @@ import { countVerdicts, relativeTime } from "../../utils/formatters";
 export function LiveFeed() {
   const [filter, setFilter] = useState(ALL);
 
-  const { data, error, isLoading, updatedAt, refresh } = useAsync(
-    (signal) => getFactChecks(signal),
-    { intervalMs: CONFIG.POLL_INTERVAL_MS },
-  );
-
-  const records = useMemo(() => data || [], [data]);
+  // Bundled sample records, in place of GET /api/factchecks. See
+  // ../data/demo-data.js for why there is no request here.
+  const records = useMemo(() => CHECKS, []);
   const counts = useMemo(() => countVerdicts(records), [records]);
 
   const filtered = useMemo(
@@ -40,11 +36,13 @@ export function LiveFeed() {
       <PageHeader
         eyebrow="Live"
         title="Verification feed"
-        description="Every claim checked through the CivicSense pipeline, newest first. This is the same backend the WhatsApp bot writes to."
+        description="Every claim checked through the CivicSense pipeline, newest first. This is the same record the WhatsApp bot writes to."
         action={<LiveBadge />}
       />
 
-      <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <SampleBanner className="mt-5">{SAMPLE_NOTICE}</SampleBanner>
+
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SegmentedControl
           label="Filter by verdict"
           value={filter}
@@ -60,26 +58,12 @@ export function LiveFeed() {
         />
 
         <p className="text-xs text-fg-faint" role="status" aria-live="polite">
-          {updatedAt ? `Updated ${relativeTime(updatedAt)}` : "Loading"} ·{" "}
           {filtered.length} shown
         </p>
       </div>
 
-      {error ? (
-        <ErrorState
-          className="mt-6"
-          error={error}
-          onRetry={refresh}
-          title="The feed did not load"
-        />
-      ) : null}
-
-      <div className="mt-6 space-y-2">
-        {isLoading && !records.length ? (
-          [0, 1, 2, 3].map((index) => (
-            <Skeleton key={index} className="h-20 w-full rounded-card" />
-          ))
-        ) : filtered.length ? (
+      <div className="mt-5 space-y-2">
+        {filtered.length ? (
           filtered.map((record, index) => (
             <VerdictRow key={record._id || record.id || index} record={record} />
           ))
@@ -89,7 +73,7 @@ export function LiveFeed() {
           <EmptyState
             icon={Radio}
             title="Nothing checked yet"
-            description="Once someone forwards a claim to the bot, it appears here within a poll cycle."
+            description="Once someone forwards a claim to the bot, it appears here."
             action={
               <a
                 href={CONFIG.WHATSAPP.joinLink}

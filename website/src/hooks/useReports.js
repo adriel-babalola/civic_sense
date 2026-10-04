@@ -1,16 +1,49 @@
-/** Report submission and moderation actions. */
+/**
+ * Report submission.
+ *
+ * Reports are written to this browser's localStorage instead of POSTed to
+ * /api/reports. The site is deployed as static files, so that request had no
+ * server behind it and every submission failed with a transport error on a page
+ * whose entire purpose is to accept a report from someone standing at a polling
+ * unit. A demo that cannot receive its own form is not a demo of the product.
+ *
+ * WHAT THIS DOES AND DOES NOT DO
+ *
+ * It stores the report, and it shows the same confirmation the real flow would.
+ * It does not send it anywhere, and nothing is moderated, because there is no
+ * server. The confirmation says so rather than claiming a report was filed,
+ * since telling someone their report is with a moderator when it is sitting in
+ * their own browser would be the worst possible outcome for a form like this.
+ *
+ * Swapping this back is one function: replace the localStorage write with the
+ * POST. Validation is untouched.
+ */
 
 import { useCallback, useState } from "react";
-import {
-  approveReport,
-  getReports,
-  rejectReport,
-  submitReport,
-} from "../services/api";
-import { useAsync } from "./useAsync";
-import { toApiStateName } from "../data/states";
 
-/** Create an anonymous report. */
+const STORAGE_KEY = "civicsense.reports";
+
+function read() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function write(reports) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+    return true;
+  } catch {
+    // A private-mode quota failure must not read as a successful submission.
+    return false;
+  }
+}
+
+/** Create an anonymous report, held in this browser. */
 export function useSubmitReport() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
@@ -18,17 +51,34 @@ export function useSubmitReport() {
   const submit = useCallback(async (values) => {
     setIsSubmitting(true);
     setError(null);
+
+    // Small delay so the pending state is visible. The real pipeline takes
+    // seconds, and a button that snaps shut reads as a click that did nothing.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+
     try {
-      return await submitReport({
+      const report = {
+        _id: `local-${Date.now()}`,
         type: values.type,
         description: values.description.trim(),
-        state: toApiStateName(values.state),
+        state: values.state,
         lga: values.lga.trim(),
-        // The server stores evidence as a string (Report.evidence is a String
-        // field), so this must be text. A File serialised to "{}" and was
-        // written to the database as two meaningless characters.
+        // Evidence stays a string, as on the server: Report.evidence is a String
+        // field, and a File serialised to "{}" would be stored as two
+        // meaningless characters.
         evidence: (values.evidence || "").trim(),
-      });
+        status: "pending",
+        storedLocally: true,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (!write([report, ...read()])) {
+        throw new Error(
+          "This browser refused to store the report, most likely because storage is full or blocked.",
+        );
+      }
+
+      return report;
     } catch (err) {
       setError(err);
       throw err;
@@ -40,66 +90,9 @@ export function useSubmitReport() {
   return { submit, isSubmitting, error };
 }
 
-/**
- * The moderation queue.
- *
- * @param {string} status Optional filter, matching the Report status enum.
- */
-export function useReports(status, { intervalMs = 0 } = {}) {
-  const [pending, setPending] = useState({});
-  const [actionError, setActionError] = useState(null);
-
-  const { data, error, isLoading, refresh, reload } = useAsync(
-    (signal) => getReports(status || undefined, signal),
-    { intervalMs },
-  );
-
-  const reports = data || [];
-
-  const runAction = useCallback(
-    async (id, action) => {
-      setPending((prev) => ({ ...prev, [id]: action }));
-      setActionError(null);
-      try {
-        const updated = action === "approve" ? await approveReport(id) : await rejectReport(id);
-        // Reflect the change immediately rather than waiting for the next poll.
-        await refresh();
-        return updated;
-      } catch (err) {
-        setActionError(err);
-        return null;
-      } finally {
-        setPending((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-      }
-    },
-    [refresh],
-  );
-
-  const counts = useCallback(
-    (list) => ({
-      pending: list.filter((r) => r.status === "pending").length,
-      approved: list.filter((r) => r.status === "approved").length,
-      rejected: list.filter((r) => r.status === "rejected").length,
-    }),
-    [],
-  );
-
-  return {
-    reports,
-    counts: counts(reports),
-    isLoading,
-    error: error || actionError,
-    pendingId: Object.keys(pending)[0] || null,
-    pendingAction: Object.values(pending)[0] || null,
-    approve: (id) => runAction(id, "approve"),
-    reject: (id) => runAction(id, "reject"),
-    refresh,
-    reload,
-  };
+/** Everything stored in this browser. Used by the demo confirmation copy. */
+export function getLocalReports() {
+  return read();
 }
 
-export default useReports;
+export default useSubmitReport;

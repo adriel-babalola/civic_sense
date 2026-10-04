@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowRight, BarChart3, MessageCircle, Search } from "lucide-react";
+import { Archive, ArrowRight, BarChart3, MessageCircle, Search, Zap } from "lucide-react";
 import { FEATURES, SAMPLE_VERDICTS, TRUST_POINTS } from "../../data/content";
 import { CONFIG, FEATURES as FEATURE_FLAGS } from "../../config/config";
 import { Button } from "../shared/Button";
@@ -172,41 +172,103 @@ export function TrustSection() {
   );
 }
 
-/** Mission statement. No team names, by policy. */
+/**
+ * Mission statement. No team names, by policy.
+ *
+ * WAS: four centred paragraphs inside a prose column, under a headline that was
+ * itself a sentence long. The whole block was one 40-character-wide ribbon of
+ * text: no line ended where the eye wanted it to, and the reading had to start
+ * again at the top of a 600px column every few words. At a phone width it was
+ * worse — a single tall grey block with nothing to anchor on.
+ *
+ * NOW: a headline column and an argument column side by side, which is the shape
+ * the argument actually has. The headline is the problem, stated once. The right
+ * column is the three reasons, each with an icon and its own short heading, so the
+ * reader can take the section in at a glance and go read the one they care about
+ * instead of scanning four undifferentiated paragraphs.
+ *
+ * The trust statement is pulled out beneath both, in its own bordered card, at
+ * quote size. It is the only part of this section that a sceptical visitor really
+ * needs, so it gets the emphasis rather than being the fourth paragraph.
+ *
+ * The measure is capped at 560px on the right column. Uncapped, these paragraphs
+ * ran to 100 characters and the eye lost the start of the next line.
+ */
 export function Mission() {
   return (
     <Section bordered>
-      <Container size="prose" className="text-center">
-        <p className="cs-eyebrow mb-2.5">Why we built this</p>
-        <h2 className="text-title text-fg">
-          Most Nigerians are not apathetic about their country. They are misinformed about it.
-        </h2>
-        <div className="mt-5 space-y-4 text-left">
-          <p>
-            Young Nigerians are handed more political information in a day than their parents saw
-            in a year, and almost all of it arrives unverified. A screenshot lands in a group
-            chat, nobody can tell whether it is real, and it gets forwarded anyway. By the time a
-            newsroom has checked it, the claim has already shaped what a hundred thousand people
-            believe.
-          </p>
-          <p>
-            That is a sensitisation problem before it is a technology problem. CivicSense exists to
-            put truth awareness in the path of the rumour. You forward the claim, and within
-            seconds you get an answer with the reporting attached, so you can judge the evidence
-            yourself and decide what to do with it.
-          </p>
-          <p>
-            The second half of the problem is memory. Politicians make promises, get elected, and
-            the record is never assembled in one place. So we keep it: who holds office, what they
-            said, and what has been documented since.
-          </p>
-          <p>
-            The aim is not to tell young Nigerians what to think. It is to make sure that whatever
-            they think, they arrived at it from evidence. We are a small team of Nigerian engineers
-            and researchers. We do not publish individual names on this site, and we answer to one
-            anonymous email address.
-          </p>
+      <Container>
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:gap-16">
+          {/* Left: the problem, stated once, at heading scale. */}
+          <div>
+            <p className="cs-eyebrow">Why we built this</p>
+            <h2 className="mt-2.5 text-[1.25rem] font-bold leading-[1.2] tracking-[-0.02em] text-fg sm:text-[1.5rem]">
+              Most Nigerians are not apathetic about their country.{" "}
+              <span className="text-brand-bright">They are misinformed about it.</span>
+            </h2>
+            {/* A rule, not a quote mark. The accent line marks the sentence as the
+                argument's premise without quoting anyone, which matters when the
+                point is that nothing here is attributed. */}
+            <div aria-hidden="true" className="mt-6 h-px w-16 bg-brand-bright/50" />
+          </div>
+
+          {/* Right: the three reasons, as discrete units. */}
+          <div className="max-w-[36rem] space-y-7">
+            {[
+              {
+                icon: MessageCircle,
+                title: "The Misinformation Crisis",
+                body: "A screenshot lands in a group chat. Nobody can tell whether it is real, and it gets forwarded anyway. By the time a newsroom has checked it, the claim has shaped what a hundred thousand people believe.",
+              },
+              {
+                icon: Zap,
+                title: "Truth in Seconds",
+                body: "CivicSense puts truth awareness in the path of the rumour. You forward the claim and get an answer with the reporting attached, so you judge the evidence yourself instead of taking our word for it.",
+              },
+              {
+                icon: Archive,
+                title: "The Memory Gap",
+                body: "Politicians make promises, get elected, and the record is never assembled in one place. So we keep it: who holds office, what they said, and what has been documented since.",
+              },
+            ].map((item) => (
+              <div key={item.title} className="flex gap-3.5">
+                <span
+                  aria-hidden="true"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control border border-line bg-surface text-brand-bright"
+                >
+                  <item.icon size={16} />
+                </span>
+                <div className="min-w-0">
+                  <h3 className="text-sm font-semibold text-fg">{item.title}</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-fg-secondary">
+                    {item.body}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
+        {/* The trust statement, as a card rather than a paragraph. This is the
+            line that answers "who are you and why should I believe you", and it
+            was previously the fourth paragraph of a block nobody scrolled to. */}
+        <figure className="cs-card mt-10 border-l-2 border-l-brand-bright/60 p-5 sm:p-6">
+          <blockquote className="max-w-[46rem] text-[0.9375rem] font-medium leading-relaxed text-fg sm:text-base">
+            Our aim is not to tell young Nigerians what to think. It is to make sure that whatever
+            they think, they arrived at it from evidence.
+          </blockquote>
+          <figcaption className="mt-2 text-xs leading-relaxed text-fg-muted">
+            We are a small team of Nigerian engineers and researchers. We do not publish
+            individual names on this site, and we answer to one email address:{" "}
+            <a
+              href={`mailto:${CONFIG.CONTACT_EMAIL}`}
+              className="font-medium text-brand-bright hover:underline"
+            >
+              {CONFIG.CONTACT_EMAIL}
+            </a>
+            .
+          </figcaption>
+        </figure>
       </Container>
     </Section>
   );

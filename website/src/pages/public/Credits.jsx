@@ -20,6 +20,7 @@ import { INEC_SOURCE } from "../../data/elections2027";
  */
 export function Credits() {
   const photos = getAllPhotos();
+  const unverifiedCount = photos.filter((photo) => photo.unverified).length;
 
   return (
     <Container className="pb-14 pt-6 sm:pt-8">
@@ -29,14 +30,35 @@ export function Credits() {
         description="Every image and every dataset on this site, who made it, and the licence or document it came from."
       />
 
-      <div className="mt-6">
-        <Alert tone="info" title="Why there are only a few photographs">
+      <div className="mt-6 space-y-3">
+        <Alert tone="info" title="Where these photographs came from">
           A stock image or a photo scraped from a news site is not an acceptable
           substitute for a missing portrait. Putting the wrong face next to a real
           name is misinformation, and reusing a copyrighted photo without
-          permission is a takedown. Everyone without a cleared licence shows their
-          initials instead.
+          permission is a takedown.
         </Alert>
+
+        {/*
+          Rendered above the list rather than buried under it, because the list
+          now contains two different kinds of entry and a reader has to be able to
+          tell which is which. The verified rows carry a Creative Commons licence
+          and a named author. The others carry the real source URL and the words
+          "Licence not verified", which is the true state of a photograph found
+          by image search. Nothing here claims a licence that was never confirmed,
+          and nothing hides which images those are.
+        */}
+        {unverifiedCount > 0 ? (
+          <Alert
+            tone="warning"
+            title={`${unverifiedCount} of these photographs have an unverified licence`}
+          >
+            They were assembled by image search and came from news outlets, social
+            media and campaign pages. Each row below names the page it came from.
+            They are published here pending permission or replacement, and the
+            entries most likely to need clearing are those whose source is a
+            publisher&apos;s own site.
+          </Alert>
+        ) : null}
       </div>
 
       <section className="mt-8">
@@ -63,14 +85,26 @@ export function Credits() {
                   {photo.taken ? `, ${photo.taken}` : ""}
                 </p>
                 <p className="mt-0.5 text-xs text-fg-faint">
-                  <a
-                    href={photo.licenseUrl}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                    className="underline underline-offset-2 hover:text-fg-muted"
-                  >
-                    {photo.license}
-                  </a>
+                  {/*
+                    A licence with no URL renders as plain text rather than as a
+                    dead link. "Licence not verified" is a statement about a fact,
+                    not a reference to look up, and wrapping it in an <a> to
+                    nothing would read as a broken promise.
+                  */}
+                  {photo.licenseUrl ? (
+                    <a
+                      href={photo.licenseUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                      className="underline underline-offset-2 hover:text-fg-muted"
+                    >
+                      {photo.license}
+                    </a>
+                  ) : (
+                    <span className={photo.unverified ? "text-unverified" : undefined}>
+                      {photo.license}
+                    </span>
+                  )}
                   {" · "}
                   <a
                     href={photo.source}
@@ -78,9 +112,17 @@ export function Credits() {
                     rel="noreferrer noopener"
                     className="underline underline-offset-2 hover:text-fg-muted"
                   >
-                    source
+                    {photo.sourceLabel || "source"}
                   </a>
                 </p>
+                {/* CC BY asks you to say whether the image was altered. Silently
+                    shipping a resize is the kind of omission that gets a
+                    volunteer-run project into trouble. */}
+                {photo.modifications ? (
+                  <p className="mt-0.5 text-2xs text-fg-faint">
+                    modified: {photo.modifications}
+                  </p>
+                ) : null}
               </div>
             </li>
           ))}

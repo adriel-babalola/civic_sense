@@ -5,6 +5,7 @@ import { Container, PageHeader, Section } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { ReportForm } from "../../components/reports/ReportForm";
 import { TRUST_POINTS } from "../../data/content";
+import { SampleBanner } from "../../components/shared/SampleBanner";
 import { relativeTime } from "../../utils/formatters";
 
 /**
@@ -14,6 +15,10 @@ import { relativeTime } from "../../utils/formatters";
  * reporter who has just sent something from a polling unit should not have to
  * find their way back, and the "what happened next" copy is the part they
  * actually need to read.
+ *
+ * Incidents only. There is no politician context here any more: a sourced
+ * profile update goes through ProfileSuggestionForm, which asks for a source
+ * and says up front that a submission is not published on request.
  */
 export function Report() {
   const [receipt, setReceipt] = useState(null);
@@ -55,19 +60,34 @@ export function Report() {
   );
 }
 
-/** Post-submit state. Says what happened, when, and what to do next. */
+/**
+ * Post-submit state.
+ *
+ * The copy here is the part that must not lie. With no report server connected,
+ * nothing was sent and no moderator will read it, so the confirmation leads with
+ * where the report actually is: this browser. Telling someone standing at a
+ * polling unit that a moderator is reading their report, when it is sitting in
+ * their own localStorage, would be the single worst failure this form could have.
+ */
 function Confirmation({ receipt, onAnother }) {
   return (
     <div className="cs-enter mt-8 space-y-5">
+      <SampleBanner>
+        No report server is connected to this deployment. Your report was saved in this browser
+        only. Nothing was transmitted, and no moderator has received it.
+      </SampleBanner>
+
       <div className="cs-card border-verified/25 p-5">
         <div className="flex items-start gap-3">
           <CheckCircle2 size={20} className="mt-0.5 shrink-0 text-verified" aria-hidden="true" />
           <div>
-            <p className="text-heading text-fg">Report received</p>
+            <p className="text-heading text-fg">Report saved on this device</p>
             <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">
-              A moderator will read it and try to corroborate it. If it holds up, it appears on
-              the public map with your description and the state and LGA, never anything about
-              you, because nothing about you was sent.
+              Your report is stored in this browser and has not been sent anywhere. Once a report
+              server is connected, submissions are written to the moderation queue, a moderator
+              reads each one against independent reporting, and only corroborated reports reach
+              the public map. That copy, your description and the state and LGA, never anything
+              about you.
             </p>
           </div>
         </div>
@@ -81,19 +101,18 @@ function Confirmation({ receipt, onAnother }) {
           {receipt?._id || receipt?.id || "submitted"}
         </p>
         <p className="cs-hint mt-1.5">
-          Reference issued {relativeTime(receipt?.timestamp || Date.now())}. Quote it if you contact
-          us about this report. It is the only way we can find it, since we cannot look it up by
-          person.
+          Saved {relativeTime(receipt?.timestamp || Date.now())} to this browser only. Clearing
+          site data deletes it, so copy this reference somewhere safe if you want to keep it.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="cs-card p-4">
-          <p className="text-sm font-medium text-fg">What happens next</p>
+          <p className="text-sm font-medium text-fg">What happens when this is live</p>
           <ol className="mt-2 space-y-1.5 text-sm text-fg-muted">
-            <li>1. A moderator checks it against newsroom reporting.</li>
-            <li>2. If corroborated, it is approved and mapped.</li>
-            <li>3. If not, it is rejected and stays private.</li>
+            <li>1. The report is written to the moderation queue, not stored in your browser.</li>
+            <li>2. A moderator checks it against newsroom reporting.</li>
+            <li>3. If corroborated, it is approved and mapped. If not, it stays private.</li>
           </ol>
         </div>
         <div className="cs-card p-4">
