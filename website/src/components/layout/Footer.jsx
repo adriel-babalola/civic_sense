@@ -35,6 +35,7 @@ const COLUMNS = [
     links: [
       { to: "/about", label: "About CivicSense" },
       { to: "/privacy", label: "Privacy policy" },
+      { to: "/data-deletion", label: "Delete your data" },
       { to: "/credits", label: "Photo and data credits" },
     ],
   },
@@ -114,6 +115,10 @@ export function Footer() {
             Verdict is a research aid, not a legal judgement.{" "}
             <Link to="/privacy" className="underline underline-offset-2 hover:text-fg-secondary">
               Privacy
+            </Link>
+            {" · "}
+            <Link to="/data-deletion" className="underline underline-offset-2 hover:text-fg-secondary">
+              Data deletion
             </Link>
             {" · "}
             <Link to="/credits" className="underline underline-offset-2 hover:text-fg-secondary">

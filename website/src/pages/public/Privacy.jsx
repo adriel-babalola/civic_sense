@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Container, PageHeader } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Alert } from "../../components/shared/Field";
@@ -9,27 +10,72 @@ import { CONFIG } from "../../config/config";
  * Written to be read by someone on a phone over data, not to be defensible in
  * a tribunal. Short sentences, concrete lists, and no clause that hides a
  * practice the code does not already follow.
+ *
+ * Two rules govern the claims below, and they are not stylistic:
+ *
+ * 1. Nothing here says data is anonymised, hashed, redacted or stripped unless
+ *    the code demonstrably does it. The report form asks for no name, which is
+ *    true because it has no field for one. The fact-check records do carry a
+ *    channel sender identifier in a field named `hashedFrom`, and that field is
+ *    not hashed today, so this page describes it as the raw identifier it is.
+ *    Overstating that is the single fastest way to lose a privacy review, and
+ *    understating it is the kind of thing that ends up in a finding.
+ *
+ * 2. Service providers are named. OpenRouter, Tavily, MongoDB Atlas and Twilio
+ *    are the four that receive user data, and a policy that says "our partners"
+ *    tells a reviewer nothing they can check.
+ *
+ * The effective date is a constant rather than prose so the update policy has
+ * something true to point at.
  */
+const EFFECTIVE_DATE = "8 October 2026";
+
+/** Analytics and advertising. We run neither, so this list can be short. */
 const NOT_COLLECTED = [
-  "Your name, email address or phone number. The report form has no field for any of them.",
-  "Analytics, advertising pixels, session recording or any third-party tracking script.",
+  "Advertising pixels, marketing tags, or session recording.",
   "Your precise location. The report form asks for a state and a local government area because that is the granularity an incident report needs, nothing more.",
   "Files from the report form. It has no upload control, so there is nothing for you to attach and nothing for us to receive.",
-  "A profile. There is no account system, so there is nothing to build a profile from.",
+  "An account or a profile. There is no sign-up, so there is no identity for us to build a record of you from.",
 ];
 
-const COLLECTED = [
+/**
+ * Two record types, because they are genuinely different and a single merged
+ * paragraph is what produced the old page's overclaim.
+ *
+ * `Report` (server/services/db.js) holds the incident form fields and no
+ * identifier of any kind.
+ *
+ * `FactCheck` (same file) holds the claim, verdict, channel, timestamp, and
+ * `hashedFrom`. The name promises a hash. The code assigns the sender value
+ * straight into it, so it currently holds a raw WhatsApp number or Telegram
+ * chat ID.
+ */
+const REPORT_FIELDS =
+  "type, description, state, local government area, any evidence text you typed, a moderation status, and a timestamp";
+
+const FACTCHECK_FIELDS =
+  "the claim text, the verdict, the channel it arrived on, a timestamp, and a sender identifier for the channel";
+
+const PROVIDERS = [
   {
-    label: "What happened",
-    body: "The incident type, your description, and the state and local government area you selected.",
+    label: "OpenRouter",
+    body: "Runs the language model that produces the verdict and summarises the sources we retrieve. It receives the claim text and any image you submitted with it.",
   },
   {
-    label: "Optional evidence",
-    body: "Text you choose to type into the evidence box: a description of what you saw, or a link to a video or post. The report form does not accept image uploads, because the field is stored as text and we would rather offer a box that works than an upload that silently fails.",
+    label: "Tavily",
+    body: "Performs the live web search that supplies reference material. It receives the search query derived from the claim.",
   },
   {
-    label: "Technical, unavoidable",
-    body: "The host serving this page records the IP address that made the request, as every web server does. Your report is not sent with it. In this deployment the report never leaves your browser at all. See the notice below.",
+    label: "MongoDB Atlas",
+    body: "Stores fact-check results and incident reports in a hosted database. It holds the record fields described above.",
+  },
+  {
+    label: "Twilio",
+    body: "Delivers the WhatsApp conversation and carries message delivery metadata under Twilio's own privacy policy.",
+  },
+  {
+    label: "A global content delivery network",
+    body: "Serves this site's static files. The host records the IP address that made each request, as every web server does.",
   },
 ];
 
@@ -46,22 +92,25 @@ export function Privacy() {
         <section>
           <h2 className="text-heading text-fg">The short version</h2>
           <p className="mt-3">
-            The report form collects only what an incident report needs. Everything else is left
-            out on purpose. We run no analytics and no advertising trackers, and we are not
-            building a profile of you across visits.
+            We store the text you send us and, when you use WhatsApp or Telegram, the identifier
+            your messaging app gives us for you. We do not ask for your name, we run no analytics
+            and no advertising trackers, and we are not building a profile of you across visits.
           </p>
         </section>
 
         {/* Sits directly under the summary because it changes what the rest of the
-            page means. The sections below describe how reports are handled once a
-            report server is connected; right now none of that is true, and a
-            visitor reading "we will delete it" needs to know we currently cannot. */}
-        <Alert tone="info" title="This deployment has no report server">
-          This copy describes the intended behaviour of CivicSense. The version you are using has
-          no report server connected. A report you submit is written to your own browser's local
-          storage and is not transmitted to us, so nobody on our side receives it, nothing is
-          added to a moderation queue, and nothing reaches the public incident map. You can
-          inspect or remove what you have saved at any time from your browser settings.
+            page means. The sections below describe the platform, which runs as a
+            WhatsApp and Telegram bot alongside a backend. This website build is
+            static: a report submitted here goes to the visitor's own browser
+            storage and is not transmitted, so nobody receives it and nothing is
+            added to a moderation queue. */}
+        <Alert tone="info" title="What this website does and does not send">
+          CivicSense runs as a WhatsApp and Telegram bot backed by a database. That is what the
+          sections below describe. The website you are reading is a static build with no backend
+          attached, so an incident report submitted on it is written to your own browser's local
+          storage and is not transmitted to us. Nothing you type on this site reaches the bot, and
+          the incidents shown on the map are a small bundled demonstration set rather than live
+          reports.
         </Alert>
 
         <section>
@@ -77,9 +126,65 @@ export function Privacy() {
         </section>
 
         <section>
-          <h2 className="text-heading text-fg">What we do collect</h2>
+          <h2 className="text-heading text-fg">What a fact-check record contains</h2>
+          <p className="mt-3">
+            When you send a claim to us on WhatsApp or Telegram, we save a record holding{" "}
+            {FACTCHECK_FIELDS}.
+          </p>
+          <p className="mt-3">
+            On the sender identifier, be clear with yourself about what the code does. It is stored
+            in a database field named <code>hashedFrom</code>. Despite that name it is not hashed at
+            present, so for a WhatsApp submission it holds your phone number in international
+            format, and for a Telegram submission it holds your chat ID. We are describing it as
+            what it is rather than as the hash its field name implies.
+          </p>
+          <p className="mt-3">
+            The claim text itself is stored in full, because it is the subject of the fact-check.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">What an incident report contains</h2>
+          <p className="mt-3">
+            A report holds the {REPORT_FIELDS}. There is no sender identifier field on a report at
+            all, and the form has no control for a name, an email address or a phone number, so
+            those are never collected here.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">Images</h2>
+          <p className="mt-3">
+            If you send an image with a claim, it is used for analysis to work out what the claim
+            is, and it is not intended for permanent storage. We are not describing any
+            redaction or metadata removal beyond that, because we would rather state the
+            behaviour we have than promise a cleaner one we have not built.
+          </p>
+          <p className="mt-3">
+            The report form on this website takes text only. It has no upload control, so there is
+            no image for it to receive.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">How a verdict is produced</h2>
+          <p className="mt-3">
+            Two automated services handle a fact-check request. OpenRouter runs the language model
+            that reads the claim and produces the verdict. Tavily runs the live web search that
+            supplies the reference material behind it. Both receive the claim text, and the model
+            also receives an image if you sent one.
+          </p>
+          <p className="mt-3">
+            A verdict is a research aid produced from retrieved sources. It is not a legal
+            judgement and it is not a substitute for reading the reporting. Every verdict lists its
+            sources so you can disagree with it on the evidence.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">Service providers</h2>
           <dl className="mt-3 space-y-4">
-            {COLLECTED.map((item) => (
+            {PROVIDERS.map((item) => (
               <div key={item.label}>
                 <dt className="text-sm font-semibold text-fg">{item.label}</dt>
                 <dd className="mt-1 text-fg-secondary">{item.body}</dd>
@@ -89,92 +194,70 @@ export function Privacy() {
         </section>
 
         <section>
-          <h2 className="text-heading text-fg">Images, and where they do and do not go</h2>
-          <p className="mt-3">
-            A photo taken on a phone usually records where and when it was taken, and often which
-            device. That is exactly the information someone reporting from a polling unit does not
-            want attached to what they saw.
-          </p>
-          <p className="mt-3">
-            So this website does not offer an image upload on the report form. What it collects
-            there is text, and text carries no location data. If you have a screenshot, forward it
-            to the WhatsApp number instead: that is the one route where an image is actually read
-            and checked, and it is handled by the bot rather than by this site.
-          </p>
-          <p className="mt-3">
-            The fact-check form does accept an image, and there the same rule applies. Before it
-            leaves your browser we strip the location and device metadata and re-encode the pixel
-            data. The form tells you which of the two methods ran, because telling you it was
-            removed when it might not have been would be worse than saying nothing.
-          </p>
-        </section>
-
-        <section>
           <h2 className="text-heading text-fg">Rate limiting</h2>
           <p className="mt-3">
-            To stop one browser saving an unbounded pile of reports, the report form allows a
-            limited number of submissions per hour, counted locally in your own browser. Clearing
-            your browser data resets that counter. It is a courtesy limit, not an identity, which is
-            the trade-off we have chosen deliberately, because the alternative is asking you to
-            identify yourself.
+            To stop one client making an unbounded number of submissions, the report form allows a
+            limited number per hour, counted in your own browser. Clearing your browser data resets
+            that counter. It is a courtesy limit rather than an identity, which is the trade-off we
+            have chosen deliberately, because the alternative is asking you to identify yourself.
           </p>
         </section>
 
         <section>
           <h2 className="text-heading text-fg">Published reports</h2>
           <p className="mt-3">
-            A report only appears on the public incident map after a moderator has corroborated it
-            against independent reporting. Published reports contain the description and the state
-            and LGA, never anything about the person who filed it, because we never had it.
-          </p>
-          <p className="mt-3">
-            In this deployment nothing is published, because nothing is received. The incidents
-            shown on the map are a small bundled demonstration set, not reports from the public.
+            A report appears on the public incident map only after a moderator has corroborated it
+            against independent reporting. Published reports carry the description and the state
+            and LGA. They do not carry a sender identifier, because the report record does not hold
+            one.
           </p>
         </section>
 
         <section>
-          <h2 className="text-heading text-fg">Deletion</h2>
+          <h2 className="text-heading text-fg">Keeping and deleting your data</h2>
           <p className="mt-3">
-            Because we hold no identifier, we cannot look up a report to delete it by asking who
-            sent it. Once a report server is connected, describing a report by state, LGA and
-            approximate date is enough to locate it, and we will delete it.
-          </p>
-          <p className="mt-3">
-            Until then, deletion is something you do yourself, which is arguably better: clearing
-            this site's data in your browser removes everything it has stored, with nothing to
-            request from us and nothing left behind.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-heading text-fg">Verdicts, not legal advice</h2>
-          <p className="mt-3">
-            A verdict is a research aid produced from retrieved sources. It is not a legal
-            judgement and it is not a substitute for reading the reporting. Every verdict lists
-            its sources so you can disagree with it on the evidence.
-          </p>
-        </section>
-
-        <section>
-          <h2 className="text-heading text-fg">Contact</h2>
-          <p className="mt-3">
-            One address, forwarded to a small team:{" "}
-            <a
-              href={`mailto:${CONFIG.CONTACT_EMAIL}`}
+            Fact-check records and incident reports are kept while the service is running. You can
+            ask for either to be deleted at any time, and we will do it once we have matched the
+            request to the record. The procedure is set out on the{" "}
+            <Link
+              to="/data-deletion"
               className="font-medium text-brand-bright underline underline-offset-2 hover:no-underline"
             >
-              {CONFIG.CONTACT_EMAIL}
+              data deletion page
+            </Link>
+            .
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">Effective date and updates</h2>
+          <p className="mt-3">
+            Effective {EFFECTIVE_DATE}. If we change what we collect or what we do with it, we
+            will update this page and change the date above to say when the change took effect. The
+            version you are reading is the one in force on the date shown.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-heading text-fg">Privacy contact</h2>
+          <p className="mt-3">
+            Questions about this policy, and requests to see or delete your data, go to one
+            address, forwarded to a small team:{" "}
+            <a
+              href={`mailto:${CONFIG.PRIVACY_EMAIL}`}
+              className="font-medium text-brand-bright underline underline-offset-2 hover:no-underline"
+            >
+              {CONFIG.PRIVACY_EMAIL}
             </a>
             .
           </p>
           <Button
-            href={`mailto:${CONFIG.CONTACT_EMAIL}`}
+            href={`mailto:${CONFIG.PRIVACY_EMAIL}`}
             variant="secondary"
             size="md"
             className="mt-5"
           >
-            Send us a question
+            Contact us about your data
           </Button>
         </section>
       </div>

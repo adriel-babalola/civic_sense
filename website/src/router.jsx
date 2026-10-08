@@ -12,6 +12,7 @@ import { Sources } from "./pages/public/Sources";
 import { About } from "./pages/public/About";
 import { FAQ } from "./pages/public/FAQ";
 import { Privacy } from "./pages/public/Privacy";
+import { DataDeletion } from "./pages/public/DataDeletion";
 import { Credits } from "./pages/public/Credits";
 import { NotFound } from "./pages/NotFound";
 import { FeatureGate } from "./components/shared/FeatureGate";
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { path: "/about", element: <About /> },
       { path: "/faq", element: <FAQ /> },
       { path: "/privacy", element: <Privacy /> },
+      { path: "/data-deletion", element: <DataDeletion /> },
       { path: "/credits", element: <Credits /> },
       { path: "*", element: <NotFound /> },
     ],
