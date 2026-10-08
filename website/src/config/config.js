@@ -26,6 +26,17 @@ const WHATSAPP_DISPLAY = "+1 415 523 8886";
 const WHATSAPP_JOIN_CODE = "join angle-building";
 
 const CONTACT_EMAIL = "civicsense@gmail.com";
+
+/**
+ * Privacy contact.
+ *
+ * Kept separate from CONTACT_EMAIL so a data subject access or erasure request
+ * has its own address to aim at, which is what Meta's Data Deletion
+ * Instructions reviewer expects to find. Same inbox is fine, a different
+ * constant is not optional: the two pages have to be able to name a privacy
+ * route without asserting that general enquiries are a privacy channel.
+ */
+const PRIVACY_EMAIL = "civicsense.verify@gmail.com";
 const GITHUB_URL = "https://github.com/adriel-babalola/civic_sense";
 const DEMO_VIDEO_URL = "https://youtu.be/nhasRYxrBNc";
 
@@ -61,6 +72,7 @@ export const CONFIG = {
     chatLink: `https://wa.me/${WHATSAPP_NUMBER_E164}`,
   },
   CONTACT_EMAIL,
+  PRIVACY_EMAIL,
   GITHUB_URL,
   DEMO_VIDEO_URL,
   FEATURES,

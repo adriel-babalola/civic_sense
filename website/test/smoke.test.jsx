@@ -14,6 +14,7 @@ import { Sources } from "../src/pages/public/Sources";
 import { About } from "../src/pages/public/About";
 import { FAQ } from "../src/pages/public/FAQ";
 import { Privacy } from "../src/pages/public/Privacy";
+import { DataDeletion } from "../src/pages/public/DataDeletion";
 import { Credits } from "../src/pages/public/Credits";
 import { NotFound } from "../src/pages/NotFound";
 import { PublicLayout } from "../src/components/layout/PublicLayout";
@@ -361,6 +362,65 @@ describe("public routes", () => {
 
     renderRoute(<Privacy />);
     expect(screen.getByText(/What we collect, and mostly what we don't/i)).toBeInTheDocument();
+    unmount();
+
+    renderRoute(<DataDeletion />);
+    expect(screen.getByText("Ask us to delete your data")).toBeInTheDocument();
+  });
+
+  /**
+   * The two disclosure pages a privacy reviewer will open.
+   *
+   * These assert the claims that are easy to soften by accident. A reword that
+   * turns "we hold a raw sender identifier" back into "we hold no identifier"
+   * would pass every other test in this file, because nothing else checks the
+   * copy against what the backend actually stores.
+   */
+  it("describes the stored sender identifier honestly on the privacy page", () => {
+    renderRoute(<Privacy />);
+
+    // The field name is named, because a reader who greps the codebase for it
+    // has to find it discussed rather than absent.
+    expect(screen.getByText(/hashedFrom/)).toBeInTheDocument();
+
+    // And it is described as un-hashed. This sentence is the whole point of
+    // naming the field at all: the name promises a hash the code does not apply.
+    expect(screen.getByText(/not hashed at present/i)).toBeInTheDocument();
+    expect(screen.getByText(/holds your phone number in international/i)).toBeInTheDocument();
+    // Named more than once by design: the prose section and the provider list
+    // each have to carry the names, so the count is asserted rather than one
+    // match being picked at random.
+    expect(screen.getAllByText(/Tavily/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/OpenRouter/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/MongoDB Atlas/).length).toBeGreaterThan(0);
+
+    // No redaction promise. The server validates magic bytes and size and then
+    // base64-encodes the buffer untouched, so this is the claim that must not
+    // creep back in.
+    expect(document.body.textContent).not.toMatch(/strip(ped|s)?\s+(the\s+)?(location|metadata|EXIF)/i);
+    expect(document.body.textContent).not.toMatch(/re-?encod/i);
+  });
+
+  it("offers a deletion route and the privacy address on both pages", () => {
+    const { unmount } = renderRoute(<Privacy />);
+    expect(
+      screen.getByRole("link", { name: /data deletion page/i }),
+    ).toHaveAttribute("href", "/data-deletion");
+    expect(
+      screen.getAllByRole("link", { name: CONFIG.PRIVACY_EMAIL }).length,
+    ).toBeGreaterThan(0);
+    unmount();
+
+    renderRoute(<DataDeletion />);
+    // A prefilled subject is what makes the request a request rather than a
+    // vague email, and the address has to be the privacy one, not the general
+    // enquiries address used elsewhere on the site.
+    const request = screen.getByRole("link", { name: /Email a deletion request/i });
+    expect(request).toHaveAttribute(
+      "href",
+      `mailto:${CONFIG.PRIVACY_EMAIL}?subject=Data%20deletion%20request`,
+    );
+    expect(request.getAttribute("href")).toContain(CONFIG.PRIVACY_EMAIL);
   });
 
   it("opens an FAQ answer on click", async () => {
@@ -1095,6 +1155,7 @@ describe("global chrome", () => {
       { element: <Home />, route: "/", path: "*" },
       { element: <About />, route: "/about", path: "*" },
       { element: <Privacy />, route: "/privacy", path: "*" },
+      { element: <DataDeletion />, route: "/data-deletion", path: "*" },
       { element: <FAQ />, route: "/faq", path: "*" },
       { element: <Sources />, route: "/sources", path: "*" },
       { element: <FactCheck />, route: "/fact-check", path: "*" },
