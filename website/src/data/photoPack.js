@@ -11,9 +11,9 @@
  *
  * HOW THESE IMAGES ARE TREATED
  *
- * All 29 of them are wired into the site at the owner's instruction, and 3 of those
- * (Atiku, Kwankwaso, Barau Jibrin) additionally carry a verified open licence.
- * The other 26 were found by image search and came from X, news
+ * All 29 of them are wired into the site at the owner's instruction, and 4 of those
+ * (Atiku Abubakar, Rabiu Kwankwaso, Mai Mala Buni, Barau Jibrin) additionally carry a verified open licence.
+ * The other 25 were found by image search and came from X, news
  * outlets, campaign sites and image-search permalinks. Their rights notes all
  * read "not independently verified", so the credit records exactly that: a real
  * source URL and "Licence not verified". No CC licence is asserted for them,
@@ -26,9 +26,9 @@
  * publisher's work. PACK_SOURCES_NEEDING_PERMISSION lists them.
  *
  * 1 folder has no image at all: Cleopas Zuwoghe's file is a saved Bing results page, so
- * there is no photograph of him here.
+ * there is no photograph of him here. Any low-resolution hold-outs: Tajudeen Abbas.
  *
- * 21 of the 30 are not on a certified 2027 ticket in this dataset. They are serving
+ * 22 of the 30 are not on a certified 2027 ticket in this dataset. They are serving
  * governors, senators and party chairs, which is a different dataset needing its
  * own verification model. Their `rosterId` is null, which is what stops a governor's
  * photograph being attached to a candidate profile it has nothing to do with.
@@ -48,6 +48,7 @@
  * @property {string|null} licenceUrl
  * @property {boolean} onCommons
  * @property {boolean} sourceIsStable  False for image-search permalinks.
+ * @property {string|null} author    Photographer/uploader, where the note names one.
  * @property {string|null} rosterId  Certified roster slug, or null.
  */
 
@@ -69,6 +70,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "bola-ahmed-tinubu"
   },
   {
@@ -87,6 +89,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "kashim-shettima"
   },
   {
@@ -105,6 +108,7 @@ export const PHOTO_PACK = [
     "licenceUrl": "https://creativecommons.org/licenses/by/2.0/",
     "onCommons": true,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "atiku-abubakar"
   },
   {
@@ -123,6 +127,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "chibuike-rotimi-amaechi"
   },
   {
@@ -141,6 +146,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "peter-gregory-obi"
   },
   {
@@ -159,6 +165,7 @@ export const PHOTO_PACK = [
     "licenceUrl": "https://commons.wikimedia.org/wiki/Template:PD-VOA",
     "onCommons": true,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "musa-mohammed-rabiu-kwankwaso"
   },
   {
@@ -177,6 +184,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "oluseyi-abiodun-makinde"
   },
   {
@@ -195,6 +203,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": "sandy-ojang-onor"
   },
   {
@@ -213,6 +222,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -231,6 +241,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -249,6 +260,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -267,6 +279,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -285,6 +298,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": false,
+    "author": null,
     "rosterId": null
   },
   {
@@ -303,6 +317,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -321,6 +336,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -339,6 +355,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -357,6 +374,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -375,6 +393,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -393,6 +412,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -411,6 +431,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -429,6 +450,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -438,15 +460,16 @@ export const PHOTO_PACK = [
     "asset": "pack-mai-mala-buni",
     "usable": true,
     "unusableReason": null,
-    "lowResolution": true,
-    "outputSize": "132x132",
-    "source": "https://www.bing.com/images/search?view=detailV2&ccid=DRN%2fusk5&id=5A9CCBBF9485F89137A3F6DEC03B402E7204F6AE&thid=OIP.DRN_usk5MJyORD0-OE87wQHaJx&mediaurl=https%3a%2f%2fyobestate.gov.ng%2fwp-content%2fuploads%2f2024%2f12%2fBuni-Official-Picture.jpeg&cdnurl=https%3a%2f%2fth.bing.com%2fth%2fid%2fR.0d137fbac939309c8e443d3e384f3bc1%3frik%3drvYEci5AO8De9g%26pid%3dImgRaw%26r%3d0&exph=2560&expw=1940&q=Mala+Buni+oficial+portrait&FORM=IRPRST&ck=691115DEA2F3B1CA461CE4DA448B9F0A&selectedIndex=1&itb=0",
-    "rights": "Yobe State Office of Auditor-General site image; official portrait. Rights: government-site reuse terms not independently verified.",
-    "rightsStatus": "unverified",
-    "licence": null,
-    "licenceUrl": null,
-    "onCommons": false,
-    "sourceIsStable": false,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://commons.wikimedia.org/wiki/File:Governor_Mai_Mala_Buni.jpg",
+    "rights": "Wikimedia Commons file; CC BY-SA 4.0. Open licence confirmed on the Commons file page.",
+    "rightsStatus": "open-licence",
+    "licence": "CC BY-SA 4.0",
+    "licenceUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "onCommons": true,
+    "sourceIsStable": true,
+    "author": "Fula boy (Wikimedia Commons)",
     "rosterId": null
   },
   {
@@ -465,6 +488,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -483,7 +507,8 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
-    "rosterId": "kabiru-yusuf"
+    "author": null,
+    "rosterId": null
   },
   {
     "order": 25,
@@ -501,6 +526,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -519,6 +545,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -537,6 +564,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -546,15 +574,16 @@ export const PHOTO_PACK = [
     "asset": "pack-umo-eno",
     "usable": true,
     "unusableReason": null,
-    "lowResolution": true,
-    "outputSize": "132x132",
-    "source": "https://www.bing.com/images/search?view=detailV2&ccid=3X1Zogo3&id=88F0EFEBF63C5A04A7E49E19E0DEDBE008C27E33&thid=OIP.3X1Zogo3a8jTfuy-W1KSgAHaKd&mediaurl=https%3a%2f%2fpuoreports.ng%2fwp-content%2fuploads%2f2023%2f06%2fGov-Eno-akwa-ibom.jpg&cdnurl=https%3a%2f%2fth.bing.com%2fth%2fid%2fR.dd7d59a20a376bc8d37eecbe5b529280%3frik%3dM37CCODb3uAZng%26pid%3dImgRaw%26r%3d0&exph=1280&expw=906&q=umo+eno+political+potrait&FORM=IRPRST&ck=172B1CD23617CEDCF648A9DCA93A426A&selectedIndex=1&itb=0",
-    "rights": "Akwa Ibom State Government portal containing governor portrait. Rights: government-site reuse terms not independently verified.",
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://akwaibomstate.gov.ng/executive-council/pastor-umo-eno/",
+    "rights": "Akwa Ibom State Government executive-council page; official portrait. Government-site reuse terms not independently verified.",
     "rightsStatus": "unverified",
     "licence": null,
     "licenceUrl": null,
     "onCommons": false,
-    "sourceIsStable": false,
+    "sourceIsStable": true,
+    "author": "Akwa Ibom State Government",
     "rosterId": null
   },
   {
@@ -573,6 +602,7 @@ export const PHOTO_PACK = [
     "licenceUrl": null,
     "onCommons": false,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   },
   {
@@ -591,6 +621,7 @@ export const PHOTO_PACK = [
     "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
     "onCommons": true,
     "sourceIsStable": true,
+    "author": null,
     "rosterId": null
   }
 ];
@@ -906,17 +937,14 @@ export const PACK_PHOTO_CREDITS = Object.fromEntries([
     "pack-mai-mala-buni",
     {
       "file": "pack-mai-mala-buni",
-      "author": "Unknown",
-      "license": "Licence not verified",
-      "licenseUrl": null,
-      "source": "https://www.bing.com/images/search?view=detailV2&ccid=DRN%2fusk5&id=5A9CCBBF9485F89137A3F6DEC03B402E7204F6AE&thid=OIP.DRN_usk5MJyORD0-OE87wQHaJx&mediaurl=https%3a%2f%2fyobestate.gov.ng%2fwp-content%2fuploads%2f2024%2f12%2fBuni-Official-Picture.jpeg&cdnurl=https%3a%2f%2fth.bing.com%2fth%2fid%2fR.0d137fbac939309c8e443d3e384f3bc1%3frik%3drvYEci5AO8De9g%26pid%3dImgRaw%26r%3d0&exph=2560&expw=1940&q=Mala+Buni+oficial+portrait&FORM=IRPRST&ck=691115DEA2F3B1CA461CE4DA448B9F0A&selectedIndex=1&itb=0",
-      "sourceLabel": "original source",
+      "author": "Fula boy (Wikimedia Commons)",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "source": "https://commons.wikimedia.org/wiki/File:Governor_Mai_Mala_Buni.jpg",
+      "sourceLabel": "Wikimedia Commons",
       "title": "Mai Mala Buni",
       "taken": null,
-      "packFolder": "22 - Mai Mala Buni",
-      "unverified": true,
-      "lowResolution": true,
-      "sourceUnstable": true
+      "packFolder": "22 - Mai Mala Buni"
     }
   ],
   [
@@ -998,17 +1026,15 @@ export const PACK_PHOTO_CREDITS = Object.fromEntries([
     "pack-umo-eno",
     {
       "file": "pack-umo-eno",
-      "author": "Unknown",
+      "author": "Akwa Ibom State Government",
       "license": "Licence not verified",
       "licenseUrl": null,
-      "source": "https://www.bing.com/images/search?view=detailV2&ccid=3X1Zogo3&id=88F0EFEBF63C5A04A7E49E19E0DEDBE008C27E33&thid=OIP.3X1Zogo3a8jTfuy-W1KSgAHaKd&mediaurl=https%3a%2f%2fpuoreports.ng%2fwp-content%2fuploads%2f2023%2f06%2fGov-Eno-akwa-ibom.jpg&cdnurl=https%3a%2f%2fth.bing.com%2fth%2fid%2fR.dd7d59a20a376bc8d37eecbe5b529280%3frik%3dM37CCODb3uAZng%26pid%3dImgRaw%26r%3d0&exph=1280&expw=906&q=umo+eno+political+potrait&FORM=IRPRST&ck=172B1CD23617CEDCF648A9DCA93A426A&selectedIndex=1&itb=0",
+      "source": "https://akwaibomstate.gov.ng/executive-council/pastor-umo-eno/",
       "sourceLabel": "original source",
       "title": "Umo Eno",
       "taken": null,
       "packFolder": "28 - Umo Eno",
-      "unverified": true,
-      "lowResolution": true,
-      "sourceUnstable": true
+      "unverified": true
     }
   ],
   [
@@ -1062,7 +1088,7 @@ export const PACK_FOR_CERTIFIED_CANDIDATES = PHOTO_PACK.filter((entry) => entry.
  * cleared with the publisher or replaced before this site is publicly deployed.
  */
 export const PACK_SOURCES_NEEDING_PERMISSION = UNCLEARED.filter((entry) =>
-  /(^|.)(premiumtimesng.com|thesun.ng|vanguardngr.com|dailytrust.com|thisdaylive.com|nairaland.com|metoricpost.com|theinvisibleinsider.org.ng|nigerianvoice.com|trumpetmediagroup.com|blogspot.com|lookaside.fb.com)/i.test(
+  /(^|[.])(premiumtimesng[.]com|thesun[.]ng|vanguardngr[.]com|dailytrust[.]com|thisdaylive[.]com|nairaland[.]com|metoricpost[.]com|theinvisibleinsider[.]org[.]ng|nigerianvoice[.]com|trumpetmediagroup[.]com|blogspot[.]com|lookaside[.]fb[.]com)/i.test(
     entry.source,
   ),
 );

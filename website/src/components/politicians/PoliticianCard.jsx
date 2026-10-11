@@ -38,7 +38,7 @@ export function PoliticianCard({ person, className }) {
   const href = `/politicians/${person.id}`;
   const url = typeof window !== "undefined" ? window.location.origin + href : "";
   const isPresidential = person.role === "presidential";
-  const partner = isPresidential ? person.runningMate : person.presidentialCandidate;
+  const partner = (isPresidential ? person.runningMate : person.presidentialCandidate) || null;
 
   return (
     <article
@@ -87,18 +87,20 @@ export function PoliticianCard({ person, className }) {
       </div>
 
       {/* The partner link must out-rank the card's own link overlay. */}
-      <Link
-        to={partner.href}
-        title={`${person.partyName} · ${isPresidential ? "running mate" : "presidential candidate"}`}
-        className="relative z-10 -mt-1 flex items-center gap-2 self-start rounded text-xs text-fg-muted transition-colors hover:text-fg"
-      >
-        <span className="shrink-0 text-2xs uppercase tracking-wide text-fg-faint">
-          {isPresidential ? "Running mate" : "Presidential"}
-        </span>
-        <span className="truncate font-medium underline underline-offset-2">
-          {partner.name}
-        </span>
-      </Link>
+      {partner ? (
+        <Link
+          to={partner.href}
+          title={`${person.partyName} · ${isPresidential ? "running mate" : "presidential candidate"}`}
+          className="relative z-10 -mt-1 flex items-center gap-2 self-start rounded text-xs text-fg-muted transition-colors hover:text-fg"
+        >
+          <span className="shrink-0 text-2xs uppercase tracking-wide text-fg-faint">
+            {isPresidential ? "Running mate" : "Presidential"}
+          </span>
+          <span className="truncate font-medium underline underline-offset-2">
+            {partner.name}
+          </span>
+        </Link>
+      ) : null}
 
       <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-subtle pt-3">
         <PartyBadge party={person.party} className="max-w-full truncate" />
@@ -147,7 +149,7 @@ export function PoliticianListRow({ person, className }) {
   const href = `/politicians/${person.id}`;
   const url = typeof window !== "undefined" ? window.location.origin + href : "";
   const isPresidential = person.role === "presidential";
-  const partner = isPresidential ? person.runningMate : person.presidentialCandidate;
+  const partner = (isPresidential ? person.runningMate : person.presidentialCandidate) || null;
 
   return (
     <article
@@ -182,7 +184,8 @@ export function PoliticianListRow({ person, className }) {
         {/* Party and role are already legible on wide screens, so below `sm` the
             row needs the ticket's other half spelled out rather than abbreviated. */}
         <p className="mt-1 truncate text-2xs text-fg-muted sm:hidden">
-          {person.office} · with {partner.name}
+          {person.office}
+          {partner ? ` · with ${partner.name}` : ""}
         </p>
       </div>
 
@@ -191,7 +194,7 @@ export function PoliticianListRow({ person, className }) {
       </span>
 
       <span className="hidden w-36 shrink-0 truncate text-xs text-fg-muted xl:block">
-        with {partner.name}
+        {partner ? `with ${partner.name}` : ""}
       </span>
 
       <span className="w-14 shrink-0 text-right text-xs tabular-nums text-fg-muted">

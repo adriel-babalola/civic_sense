@@ -49,6 +49,8 @@
 
 import { slugify } from "../utils/formatters";
 import { getPhoto } from "./photos";
+import { PHOTO_PACK } from "./photoPack";
+import { SAMPLE_OFFICEHOLDERS } from "./officeholders";
 import {
   TICKETS_2027,
   INEC_SOURCE,
@@ -82,36 +84,30 @@ const PHOTOS = {
 };
 
 /*
- * Research-pack photographs, keyed by the pack's own short name.
+ * Research-pack photographs, keyed by CERTIFIED ROSTER SLUG.
  *
  * Added at the owner's instruction after a 30-image pack was assembled by image
  * search. Three of those came with a verified open licence; the rest did not,
  * and ./photoPack.js records the real source and "Licence not verified" for each
  * rather than asserting a CC licence that was never confirmed.
  *
- * Kept in a SEPARATE map from PHOTOS above rather than merged into it, because
- * the two have different provenance and that difference has to stay visible:
+ * The pack uses common short names ("Peter Obi", "Sandy Onor") while the roster
+ * uses the INEC form ("Peter Gregory Obi", "Sandy Ojang Onor"), so a name-keyed
+ * map silently matched nothing. The generator already records the one verified
+ * equivalence per person as `rosterId`, so the lookup keys off that instead of
+ * re-deriving names here: the pack is the single source of truth for who its
+ * images actually are.
  *
- *   - PHOTOS are Wikimedia Commons files whose licence and author were checked.
- *     Those keep their proper CC terms on /credits.
- *   - These are pack images. For Atiku and Kwankwaso the pack has a copy of the
- *     same picture, and the curated entry above deliberately wins, so a verified
- *     credit is never replaced by an unverified one.
- *
- * Every entry here is a person who IS on a certified 2027 ticket. The other 21
- * pack subjects are serving governors, senators and party chairs; they have no
- * profile in this dataset, so nothing here points at them.
+ * Kept SEPARATE from PHOTOS rather than merged, because the two have different
+ * provenance and that difference has to stay visible: PHOTOS are Wikimedia
+ * Commons files with checked licences, the pack entries are "not independently
+ * verified". Precedence below makes the curated licence win.
  */
-const PACK_PHOTOS = {
-  "Atiku Abubakar": "atiku",
-  "Bola Ahmed Tinubu": "tinubu",
-  "Kashim Shettima": "shettima",
-  "Peter Obi": "pack-peter-obi",
-  "Rabiu Kwankwaso": "kwankwaso",
-  "Rotimi Amaechi": "amaechi",
-  "Sandy Onor": "pack-sandy-onor",
-  "Seyi Makinde": "pack-seyi-makinde",
-};
+const PACK_PHOTOS_BY_ROSTER_ID = Object.fromEntries(
+  PHOTO_PACK.filter((entry) => entry.rosterId && entry.usable && entry.asset).map(
+    (entry) => [entry.rosterId, entry.asset],
+  ),
+);
 
 /**
  * Curated licence first, pack image second.
@@ -123,7 +119,7 @@ const PACK_PHOTOS = {
  * unverified copy of what looks like the same picture would be a downgrade.
  */
 function resolvePhotoId(name) {
-  return PHOTOS[name] || PACK_PHOTOS[name] || null;
+  return PHOTOS[name] || PACK_PHOTOS_BY_ROSTER_ID[slugify(name)] || null;
 }
 
 /** Encyclopaedia entries, for readers who want to check a name. */
@@ -223,6 +219,7 @@ function build(ticket) {
       external: [],
       reference: REFERENCES[name] || null,
       verification: "verified",
+      category: "certified",
     };
   };
 
@@ -242,8 +239,10 @@ export const POLITICIANS = TICKETS_2027.flatMap(build);
  * that renders one person twice under two slugs is a bug worth guarding even
  * though the current list is clean.
  */
+export const ALL_POLITICIANS = [...POLITICIANS, ...SAMPLE_OFFICEHOLDERS];
+
 export const UNIQUE_POLITICIANS = Object.values(
-  POLITICIANS.reduce((acc, person) => {
+  ALL_POLITICIANS.reduce((acc, person) => {
     if (!acc[person.id]) acc[person.id] = person;
     return acc;
   }, {}),

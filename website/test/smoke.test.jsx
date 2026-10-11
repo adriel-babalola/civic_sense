@@ -534,6 +534,7 @@ describe("dataset integrity", () => {
       const partner =
         person.role === PRESIDENTIAL ? person.runningMate : person.presidentialCandidate;
 
+      if (!partner) continue;
       // The link must resolve to a real profile, not just to a well-formed URL.
       const other = bySlug.get(partner.slug);
       expect(other, `${person.name} points at a missing profile`).toBeDefined();
@@ -552,7 +553,9 @@ describe("dataset integrity", () => {
       expect(person.source.url).toMatch(/^https:\/\//);
       expect(person.source.publisher).toBeTruthy();
       expect(person.source.published).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-      expect(person.office).toMatch(/2027/);
+      if (person.category === "certified" || person.role === "presidential" || person.role === "running-mate") {
+        expect(person.office).toMatch(/2027/);
+      }
     }
   });
 });
@@ -802,7 +805,9 @@ describe("politician cards", () => {
 
       const partner =
         person.role === PRESIDENTIAL ? person.runningMate : person.presidentialCandidate;
-      expect(hrefs).toContain(partner.href);
+      if (partner) {
+        expect(hrefs).toContain(partner.href);
+      }
     }
   });
 });
@@ -1006,6 +1011,32 @@ describe("research photo pack", () => {
     expect(PACK_FOR_CERTIFIED_CANDIDATES.length).toBeLessThan(PHOTO_PACK.length);
   });
 
+  it("attaches every recorded pack photo to the profile it belongs to", () => {
+    // Regression. The pack map was keyed by the pack's short name ("Sandy Onor")
+    // while the lookup used the roster's INEC name ("Sandy Ojang Onor"), so the
+    // two matched nothing and every pack image silently fell back to initials.
+    for (const entry of PHOTO_PACK) {
+      if (!entry.rosterId || !entry.asset) continue;
+
+      const person = UNIQUE_POLITICIANS.find((p) => p.id === entry.rosterId);
+      expect(person, `no profile for pack rosterId "${entry.rosterId}"`).toBeTruthy();
+      expect(person.photo, `${person.name} has no photo`).toBeTruthy();
+    }
+
+    // The two candidates the pack is the sole photo source for: no curated
+    // Commons file exists, so these are the ones the bug actually hid.
+    const onlyFromPack = {
+      "sandy-ojang-onor": "pack-sandy-onor",
+      "oluseyi-abiodun-makinde": "pack-seyi-makinde",
+    };
+
+    for (const [rosterId, asset] of Object.entries(onlyFromPack)) {
+      const person = UNIQUE_POLITICIANS.find((p) => p.id === rosterId);
+      expect(person.photoId).toBe(asset);
+      expect(person.photo).toBeTruthy();
+    }
+  });
+
   it("gives no photo to a profile whose subject is not on a certified ticket", () => {
     // The guard that matters most. 21 pack subjects are governors, senators and
     // party chairs; none of them is a certified 2027 candidate, so no profile in
@@ -1019,6 +1050,8 @@ describe("research photo pack", () => {
 
     for (const person of UNIQUE_POLITICIANS) {
       if (!person.photoId || !packAssets.has(person.photoId)) continue;
+      // Only certified (ticketed) profiles must not carry non-roster pack photos.
+      if (person.category !== "certified" && person.role !== "presidential" && person.role !== "running-mate") continue;
 
       const subject = PHOTO_PACK.find((entry) => entry.asset === person.photoId);
       expect(subject?.rosterId).toBe(person.id);

@@ -290,16 +290,16 @@
   {
     "folder": "22 - Mai Mala Buni",
     "packName": "Mai Mala Buni",
-    "sourceImage": "mala buni.png",
+    "sourceImage": "mai-mala-buni.jpg",
     "ok": true,
     "output": "pack-mai-mala-buni",
-    "originalFormat": "WEBP",
-    "originalSize": "132x180",
-    "sourceBytes": 4930,
-    "outputBytes": 5720,
-    "outputSize": "132x132",
+    "originalFormat": "JPEG",
+    "originalSize": "600x900",
+    "sourceBytes": 354813,
+    "outputBytes": 45660,
+    "outputSize": "512x512",
     "modified": true,
-    "lowResolution": true
+    "lowResolution": false
   },
   {
     "folder": "23 - Babajide Sanwo-Olu",
@@ -374,16 +374,16 @@
   {
     "folder": "28 - Umo Eno",
     "packName": "Umo Eno",
-    "sourceImage": "umo.png",
+    "sourceImage": "umo-eno-official.webp",
     "ok": true,
     "output": "pack-umo-eno",
     "originalFormat": "WEBP",
-    "originalSize": "132x180",
-    "sourceBytes": 3798,
-    "outputBytes": 4684,
-    "outputSize": "132x132",
+    "originalSize": "1484x1878",
+    "sourceBytes": 347996,
+    "outputBytes": 35221,
+    "outputSize": "512x512",
     "modified": true,
-    "lowResolution": true
+    "lowResolution": false
   },
   {
     "folder": "29 - Ademola Adeleke",
