@@ -1,5 +1,5 @@
 import { slugify } from '../utils/formatters';
-import { getPhoto } from './photos';
+
 
 /** Sample officeholders derived from the research photo pack (not certified 2027 candidates). */
 export const SAMPLE_OFFICEHOLDERS = [
