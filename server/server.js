@@ -17,6 +17,7 @@ import {
   updateReportStatus,
   isDbConnected,
   countArticles,
+  saveProfileSuggestion,
 } from "./services/db.js";
 import { startScraper, getScraperStats, syncOnce } from "./services/scraper.js";
 import { validateImageBuffer, bufferToDataUrl, imageFromUrl } from "./services/image.js";
@@ -35,6 +36,8 @@ import {
   downloadMedia as downloadMetaMedia,
 } from "./services/metaWhatsapp.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
+import adminRouter from "./routes/admin.js";
+import { requireAdmin } from "./middleware/adminAuth.js";
 
 const app = express();
 app.use(compression());
@@ -384,7 +387,33 @@ app.get("/api/reports", async (req, res) => {
   }
 });
 
-app.patch("/api/reports/:id/approve", async (req, res) => {
+// Admin API routes (mounted under /api/admin)
+app.use("/api/admin", adminRouter);
+
+// Public profile adjustment suggestion submission
+app.post("/api/suggestions", async (req, res) => {
+  const { politicianSlug, politicianName, field, suggestedText, sourceUrl } = req.body || {};
+  if (!politicianSlug || !politicianName || !suggestedText || !sourceUrl) {
+    return res.status(400).json({
+      success: false,
+      error: "Missing required fields: politicianSlug, politicianName, suggestedText, sourceUrl",
+    });
+  }
+  try {
+    const suggestion = await saveProfileSuggestion({
+      politicianSlug,
+      politicianName,
+      field: field || "general",
+      suggestedText,
+      sourceUrl,
+    });
+    res.json({ success: true, data: suggestion });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.patch("/api/reports/:id/approve", requireAdmin, async (req, res) => {
   try {
     const report = await updateReportStatus(req.params.id, "approved");
     if (!report) return res.status(404).json({ success: false, error: "Report not found" });
@@ -394,7 +423,7 @@ app.patch("/api/reports/:id/approve", async (req, res) => {
   }
 });
 
-app.patch("/api/reports/:id/reject", async (req, res) => {
+app.patch("/api/reports/:id/reject", requireAdmin, async (req, res) => {
   try {
     const report = await updateReportStatus(req.params.id, "rejected");
     if (!report) return res.status(404).json({ success: false, error: "Report not found" });
