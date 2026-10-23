@@ -33,14 +33,9 @@ const HELP_MESSAGES = new Set([
 const MENU_REPLIES = new Map([
   ["1", "Send me the political claim you want me to fact-check."],
   ["2", "Send me the screenshot or image you want me to check."],
-  [
-    "3",
-    "Send me a political claim or screenshot. I search available sources, compare the evidence, and return a sourced verdict. I do not need your name or an account.",
-  ],
-  [
-    "4",
-    "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion",
-  ],
+  ["3", "CivicSense is a non-partisan fact-checking bot that verifies political claims by searching multiple sources, comparing evidence, and returning a sourced verdict. I do not collect your name or require an account. Reply '1' to fact-check a claim, or send me a claim or image to get started."],
+  ["4", "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion"],
+  ["5", "Pull latest nightly news"],
 ]);
 
 function normalizeMessage(text) {

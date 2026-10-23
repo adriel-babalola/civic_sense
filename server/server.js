@@ -215,7 +215,9 @@ app.post("/webhook/meta", async (req, res) => {
   firstMessageUsers.add(message.from);
   const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst });
   if (route.intent !== "fact-check") {
-    return sendMetaTextMessage(message.from, route.reply).catch((err) => {
+    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
+    const combinedReply = welcomeMsg ? `${route.reply}\n\n${welcomeMsg}` : route.reply;
+    return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
       console.error("Casual Meta reply error:", err.message);
     });
   }
@@ -281,7 +283,9 @@ app.post("/webhook", async (req, res) => {
     setImmediate(async () => {
       try {
         const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({ from: to, to: from, body: route.reply });
+        const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
+        const combinedReply = welcomeMsg ? `${route.reply}\n\n${welcomeMsg}` : route.reply;
+        await twilioClient.messages.create({ from: to, to: from, body: combinedReply });
         console.log(`[WhatsApp] Casual reply sent to ${from}`);
       } catch (err) {
         console.error("Casual reply error:", err.message);
@@ -375,7 +379,8 @@ app.post("/webhook/telegram", async (req, res) => {
     await sendMessage(message.chatId, result.verdict);
   } catch (err) {
     console.error("Telegram webhook error:", err);
-    await sendMessage(message.chatId, "Sorry, I couldn't process that. Please try again with a text claim.");
+    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
+    await sendMessage(message.chatId, `Sorry, I couldn't process that. Please try again with a text claim.${welcomeMsg ? `\n\n${welcomeMsg}` : ""}`);
   }
 });
 
