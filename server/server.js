@@ -49,6 +49,9 @@ app.use(express.json({
 // Track users who have sent their first message
 const firstMessageUsers = new Set();
 
+// Track users who have responded to the dropdown prompt
+const promptStates = new Map();
+
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -213,10 +216,20 @@ app.post("/webhook/meta", async (req, res) => {
 
   const isFirst = !firstMessageUsers.has(message.from);
   firstMessageUsers.add(message.from);
-  const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst });
+  const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst, userId: message.from });
   if (route.intent !== "fact-check") {
     const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-    const combinedReply = welcomeMsg ? `${route.reply}\n\n${welcomeMsg}` : route.reply;
+    let combinedReply = route.reply;
+    // Add prompt if user is in pending prompt state
+    const promptState = promptStates.get(message.from);
+    if (promptState === "awaiting_yes_no") {
+      combinedReply = `${route.reply}\n\nDo you want to go back to dropdown? Type yes or no`;
+    } else if (promptState === "awaiting_dropdown") {
+      // User already said yes, dropdown was shown, reset state
+      promptStates.delete(message.from);
+    }
+    // If user just said yes/no, the routeMessage already handled it
+    // Send the reply
     return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
       console.error("Casual Meta reply error:", err.message);
     });
@@ -278,13 +291,21 @@ app.post("/webhook", async (req, res) => {
 
   const isFirst = !firstMessageUsers.has(from);
   firstMessageUsers.add(from);
-  const route = routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst });
+  const route = routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst, userId: from });
   if (route.intent !== "fact-check") {
     setImmediate(async () => {
       try {
         const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
         const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-        const combinedReply = welcomeMsg ? `${route.reply}\n\n${welcomeMsg}` : route.reply;
+        let combinedReply = route.reply;
+        // Add prompt if user is in pending prompt state
+        const promptState = promptStates.get(from);
+        if (promptState === "awaiting_yes_no") {
+          combinedReply = `${route.reply}\n\nDo you want to go back to dropdown? Type yes or no`;
+        } else if (promptState === "awaiting_dropdown") {
+          // User already said yes, dropdown was shown, reset state
+          promptStates.delete(from);
+        }
         await twilioClient.messages.create({ from: to, to: from, body: combinedReply });
         console.log(`[WhatsApp] Casual reply sent to ${from}`);
       } catch (err) {
@@ -376,7 +397,17 @@ app.post("/webhook/telegram", async (req, res) => {
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
 
-    await sendMessage(message.chatId, result.verdict);
+    let combinedReply = result.verdict;
+    // Add prompt if user is in pending prompt state
+    const promptState = promptStates.get(message.chatId);
+    if (promptState === "awaiting_yes_no") {
+      combinedReply = `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`;
+    } else if (promptState === "awaiting_dropdown") {
+      // User already said yes, dropdown was shown, reset state
+      promptStates.delete(message.chatId);
+    }
+
+    await sendMessage(message.chatId, combinedReply);
   } catch (err) {
     console.error("Telegram webhook error:", err);
     const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";

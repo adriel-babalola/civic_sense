@@ -24,6 +24,8 @@ const CASUAL_MESSAGES = new Map([
   ["thank you", `You are welcome!\n\n${DROPDOWN_OPTIONS}`],
 ]);
 
+const PROMPT_STATES = new Map();
+
 const HELP_MESSAGES = new Set([
   "help",
   "what can you do",
@@ -45,10 +47,11 @@ function normalizeMessage(text) {
     .toLowerCase();
 }
 
-export function routeMessage(text, { hasImage = false, isFirstMessage = false } = {}) {
+export function routeMessage(text, { hasImage = false, isFirstMessage = false, userId } = {}) {
   if (hasImage) return { intent: "fact-check" };
 
   if (isFirstMessage) {
+    PROMPT_STATES.delete(userId);
     return { intent: "casual", reply: DROPDOWN_OPTIONS };
   }
 
@@ -56,7 +59,20 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false } 
   if (!normalized) return { intent: "unclear" };
 
   const menuReply = MENU_REPLIES.get(normalized);
-  if (menuReply) return { intent: "menu-option", reply: menuReply };
+  if (menuReply) {
+    if (normalized === "yes" || normalized === "no") {
+      const state = PROMPT_STATES.get(userId) || "";
+      if (normalized === "yes") {
+        PROMPT_STATES.set(userId, "awaiting_dropdown");
+        return { intent: "casual", reply: DROPDOWN_OPTIONS };
+      }
+      if (normalized === "no") {
+        PROMPT_STATES.delete(userId);
+        return { intent: "menu-option", reply: menuReply };
+      }
+    }
+    return { intent: "menu-option", reply: menuReply };
+  }
 
   const casualReply = CASUAL_MESSAGES.get(normalized);
   if (casualReply) return { intent: "casual", reply: casualReply };
