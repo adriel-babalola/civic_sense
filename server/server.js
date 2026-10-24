@@ -250,8 +250,11 @@ app.post("/webhook/meta", async (req, res) => {
     }
     // If user just said yes/no, the routeMessage already handled it
     // Send the reply
+    console.log(`[Meta] Casual reply to=${message.from} intent=${route.intent} reply="${combinedReply ? combinedReply.substring(0, 80) : "EMPTY"}..."`);
     return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
-      console.error("Casual Meta reply error:", err.message);
+      const metaErr = err.response?.data || {};
+      console.error(`Casual Meta reply error: ${err.message} status=${err.response?.status}`);
+      console.error(`Casual Meta reply details:`, JSON.stringify(metaErr));
     });
   }
 
