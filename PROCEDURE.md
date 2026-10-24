@@ -5,7 +5,7 @@
 ## Current Working State
 
 - **Branch:** `feat/privacy-policy`
-- **Latest commit:** (see `git log` — includes news digest + state unification)
+- **Latest commit:** `cbfbc93` — news digest + state unification + yes/no fix + Telegram routing
 - **Server:** Render — `https://civic-sense-8d2m.onrender.com`
 - **Status:** ✅ Dropdown 1-5, nightly news digest, post-task yes/no prompt all working
 
