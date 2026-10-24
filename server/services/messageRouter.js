@@ -33,11 +33,11 @@ const HELP_MESSAGES = new Set([
 ]);
 
 const MENU_REPLIES = new Map([
-  ["1", "Send me the political claim you want me to fact-check."],
-  ["2", "Send me the screenshot or image you want me to check."],
-  ["3", "CivicSense is a non-partisan fact-checking bot that verifies political claims by searching multiple sources, comparing evidence, and returning a sourced verdict. I do not collect your name or require an account. Reply '1' to fact-check a claim, or send me a claim or image to get started."],
-  ["4", "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion"],
-  ["5", "Pull latest nightly news"],
+  ["1", "Pull latest nightly news"],
+  ["2", "Send me the political claim you want me to fact-check."],
+  ["3", "Send me the screenshot or image you want me to check."],
+  ["4", "CivicSense is a non-partisan fact-checking bot that verifies political claims by searching multiple sources, comparing evidence, and returning a sourced verdict. I do not collect your name or require an account."],
+  ["5", "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion"],
 ]);
 
 function normalizeMessage(text) {
