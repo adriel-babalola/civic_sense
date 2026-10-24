@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KB_PATH = path.join(__dirname, "..", "data", "civic_kb.json");
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = process.env.LLM_MODEL || "google/gemini-2.5-flash";
+const MODEL = process.env.LLM_MODEL || "google/gemma-4-31b-it";
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 25000;
 
 function normalizeClaim(claim) {

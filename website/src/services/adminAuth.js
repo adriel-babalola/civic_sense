@@ -39,8 +39,8 @@ export function setAdminSession(token, user) {
     if (user) {
       localStorage.setItem(USER_KEY, JSON.stringify(user));
     }
-  } catch (err) {
-    console.error("[Admin Auth] Failed to save session to localStorage:", err);
+  } catch {
+    // ignore storage errors
   }
 }
 
@@ -49,8 +49,8 @@ export function clearAdminSession() {
   try {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
-  } catch (err) {
-    console.error("[Admin Auth] Failed to clear session:", err);
+  } catch {
+    // ignore storage errors
   }
 }
 
@@ -94,7 +94,7 @@ export async function loginAdmin(email, password) {
       admin: data.admin,
       token: data.token,
     };
-  } catch (err) {
+  } catch {
     // During local development, if backend server on port 3000 is not running,
     // allow a seamless dev sandbox session so the admin UI can be tested without friction.
     if (import.meta.env.DEV) {

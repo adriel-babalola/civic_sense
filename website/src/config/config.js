@@ -16,14 +16,20 @@ const SITE_URL = (env.VITE_SITE_URL || "https://civic-sense-website.vercel.app")
 /**
  * WhatsApp number.
  *
- * PLACEHOLDER. The production Twilio number has not been provisioned, so this is
- * the Twilio sandbox rather than a real CivicSense line. It renders correctly and
- * the deep link is well formed, but messages sent here reach a sandbox and not
- * the bot. Replace all three values together when the number is issued.
+ * Supplied at build time via `VITE_WHATSAPP_NUMBER`. There is no hardcoded
+ * fallback: the number is deployment data, and every consumer reads it from
+ * here so a single env change updates every CTA.
  */
-const WHATSAPP_NUMBER_E164 = "+14155238886";
-const WHATSAPP_DISPLAY = "+1 415 523 8886";
-const WHATSAPP_JOIN_CODE = "join angle-building";
+const WHATSAPP_NUMBER_E164 = (env.VITE_WHATSAPP_NUMBER || "").trim();
+
+function formatPhone(e164) {
+  const match = /^\+(\d{1,3})(\d{3})(\d{3})(\d{4})$/.exec(e164);
+  if (!match) return e164;
+  const [, cc, a, b, c] = match;
+  return `+${cc} ${a} ${b} ${c}`;
+}
+
+const WHATSAPP_DISPLAY = formatPhone(WHATSAPP_NUMBER_E164);
 
 const CONTACT_EMAIL = "civicsense@gmail.com";
 
@@ -62,13 +68,8 @@ export const CONFIG = {
   WHATSAPP: {
     e164: WHATSAPP_NUMBER_E164,
     display: WHATSAPP_DISPLAY,
-    joinCode: WHATSAPP_JOIN_CODE,
-    /** True while WHATSAPP_NUMBER_E164 is still the Twilio sandbox. */
-    isPlaceholder: true,
-    /** Deep link that opens WhatsApp with the sandbox join code prefilled. */
-    joinLink: `https://wa.me/${WHATSAPP_NUMBER_E164}?text=${encodeURIComponent(
-      WHATSAPP_JOIN_CODE,
-    )}`,
+    /** Deep link that opens a chat with the CivicSense bot. */
+    joinLink: `https://wa.me/${WHATSAPP_NUMBER_E164}`,
     chatLink: `https://wa.me/${WHATSAPP_NUMBER_E164}`,
   },
   CONTACT_EMAIL,

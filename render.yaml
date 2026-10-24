@@ -38,16 +38,12 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_WHATSAPP_NUMBER
-        sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: SCRAPE_SECRET
         generateValue: true
       - key: LLM_MODEL
-        value: google/gemini-2.5-flash
+        value: google/gemma-4-31b-it
       - key: LLM_TIMEOUT_MS
         value: "12000"
       - key: PIPELINE_DEADLINE_MS
@@ -60,6 +56,8 @@ services:
         value: "5"
       - key: META_MEDIA_MAX_MB
         value: "5"
+      - key: META_TIMEOUT_MS
+        value: "15000"
       - key: CACHE_TTL_SEC
         value: "3600"
       - key: CACHE_MAX_ENTRIES
