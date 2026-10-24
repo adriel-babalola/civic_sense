@@ -60,6 +60,9 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
 
   const menuReply = MENU_REPLIES.get(normalized);
   if (menuReply) {
+    // Define state once at the top
+    const state = PROMPT_STATES.get(userId) || "";
+    
     // Check for numbers 1-5 first (before yes/no check)
     if (["1", "2", "3", "4", "5"].includes(normalized)) {
       if (state === "awaiting_numbers") {
@@ -70,7 +73,6 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
     }
 
     if (normalized === "yes" || normalized === "no") {
-      const state = PROMPT_STATES.get(userId) || "";
       if (normalized === "yes") {
         PROMPT_STATES.set(userId, "awaiting_dropdown");
         return { intent: "casual", reply: DROPDOWN_OPTIONS };
