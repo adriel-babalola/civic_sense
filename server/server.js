@@ -255,6 +255,7 @@ app.post("/webhook/meta", async (req, res) => {
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
       await sendMetaTextMessage(message.from, result.verdict);
+      promptStates.set(message.from, "awaiting_numbers");
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
       console.error("Meta webhook async error:", err);
@@ -341,6 +342,7 @@ app.post("/webhook", async (req, res) => {
         to: from,   // The user who sent the message
         body: result.verdict,
       });
+      promptStates.set(from, "awaiting_numbers");
       console.log(`[WhatsApp] Reply sent to ${from}`);
     } catch (err) {
       console.error("Webhook async error:", err);
@@ -408,6 +410,7 @@ app.post("/webhook/telegram", async (req, res) => {
     }
 
     await sendMessage(message.chatId, combinedReply);
+      promptStates.set(message.chatId, "awaiting_numbers");
   } catch (err) {
     console.error("Telegram webhook error:", err);
     const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";

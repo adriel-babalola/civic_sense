@@ -8,11 +8,11 @@ const MENU = [
 ].join("\n");
 
 const DROPDOWN_OPTIONS = [
-  "📰 Pull latest nightly news",
-  "🔍 Fact-check a claim",
-  "📸 Check an image",
-  "ℹ️ How CivicSense works",
-  "🔒 Privacy and data deletion",
+  "1. 📰 Pull latest nightly news",
+  "2. 🔍 Fact-check a claim",
+  "3. 📸 Check an image",
+  "4. ℹ️ How CivicSense works",
+  "5. 🔒 Privacy and data deletion",
 ].join("\n");
 
 const CASUAL_MESSAGES = new Map([
@@ -71,6 +71,21 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
         return { intent: "menu-option", reply: menuReply };
       }
     }
+    // Handle awaiting_numbers state
+    if (state === "awaiting_numbers") {
+      if (normalized === "yes") {
+        PROMPT_STATES.set(userId, "awaiting_dropdown");
+        return { intent: "casual", reply: DROPDOWN_OPTIONS };
+      }
+      if (normalized === "no") {
+        PROMPT_STATES.delete(userId);
+        // Continue with number-based flow - treat input as next number choice
+        if (["1", "2", "3", "4", "5"].includes(normalized)) {
+          return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
+        }
+        return { intent: "unclear", reply: `Please type a number 1-5 or "yes" to go back to dropdown.` };
+      }
+    }
     return { intent: "menu-option", reply: menuReply };
   }
 
@@ -92,4 +107,3 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
 }
 
 export { MENU, DROPDOWN_OPTIONS };
-
