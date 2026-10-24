@@ -67,9 +67,9 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
     if (["1", "2", "3", "4", "5"].includes(normalized)) {
       if (state === "awaiting_numbers") {
         PROMPT_STATES.delete(userId);
-        return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
+        return { intent: "menu-option", reply: menuReply };
       }
-      return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
+      return { intent: "menu-option", reply: menuReply };
     }
 
     if (normalized === "yes" || normalized === "no") {
