@@ -7,6 +7,26 @@ import rateLimit from "express-rate-limit";
 import multer from "multer";
 dotenv.config();
 
+// Universal phone number normalizer for consistent promptStates keys
+// Accepts: +8801700000000, 8801700000000, 2347063373229
+// Returns: +8801700000000 (E.164 format with + prefix)
+function normalizePhoneNumber(num) {
+  if (!num) return num;
+  // Remove all non-digit characters except leading +
+  let cleaned = num.replace(/[^\d+]/g, '');
+  // Ensure it starts with + for E.164 compatibility
+  if (!cleaned.startsWith('+') && cleaned.length > 8) {
+    // Keep as-is if already valid format, otherwise prepend +
+    // This ensures consistent keys in promptStates Map
+    if (cleaned.startsWith('0') && cleaned.length > 9) {
+      // Local format - keep as-is or could map to country code
+      return '+' + cleaned;
+    }
+    return '+' + cleaned;
+  }
+  return cleaned;
+}
+
 import { runFactCheck } from "./services/pipeline.js";
 import {
   connectDB,
@@ -255,7 +275,7 @@ app.post("/webhook/meta", async (req, res) => {
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
       await sendMetaTextMessage(message.from, result.verdict);
-      promptStates.set(message.from, "awaiting_numbers");
+      promptStates.set(normalizePhoneNumber(message.from), "awaiting_numbers");
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
       console.error("Meta webhook async error:", err);
@@ -342,7 +362,7 @@ app.post("/webhook", async (req, res) => {
         to: from,   // The user who sent the message
         body: result.verdict,
       });
-      promptStates.set(from, "awaiting_numbers");
+      promptStates.set(normalizePhoneNumber(from), "awaiting_numbers");
       console.log(`[WhatsApp] Reply sent to ${from}`);
     } catch (err) {
       console.error("Webhook async error:", err);
@@ -410,7 +430,7 @@ app.post("/webhook/telegram", async (req, res) => {
     }
 
     await sendMessage(message.chatId, combinedReply);
-      promptStates.set(message.chatId, "awaiting_numbers");
+      promptStates.set(normalizePhoneNumber(message.chatId.toString()), "awaiting_numbers");
   } catch (err) {
     console.error("Telegram webhook error:", err);
     const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
