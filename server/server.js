@@ -35,6 +35,7 @@ import {
   sendTextMessage as sendMetaTextMessage,
   downloadMedia as downloadMetaMedia,
 } from "./services/metaWhatsapp.js";
+import { routeMessage } from "./services/messageRouter.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
 import adminRouter from "./routes/admin.js";
 import { requireAdmin } from "./middleware/adminAuth.js";
@@ -47,6 +48,9 @@ app.use(express.json({
   limit: "10mb",
   verify: (req, res, buffer) => { req.rawBody = buffer; },
 }));
+
+// Track users who have sent their first message
+const firstMessageUsers = new Set();
 
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
 const upload = multer({
@@ -210,6 +214,15 @@ app.post("/webhook/meta", async (req, res) => {
   );
   res.send("ok");
 
+  const isFirst = !firstMessageUsers.has(message.from);
+  firstMessageUsers.add(message.from);
+  const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst });
+  if (route.intent !== "fact-check") {
+    return sendMetaTextMessage(message.from, route.reply).catch((err) => {
+      console.error("Casual Meta reply error:", err.message);
+    });
+  }
+
   setImmediate(async () => {
     try {
       let imageDataUrl = null;
@@ -263,6 +276,22 @@ app.post("/webhook", async (req, res) => {
   const twiml = new twilio.twiml.MessagingResponse();
   res.type("text/xml");
   res.status(200).send(twiml.toString());
+
+  const isFirst = !firstMessageUsers.has(from);
+  firstMessageUsers.add(from);
+  const route = routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst });
+  if (route.intent !== "fact-check") {
+    setImmediate(async () => {
+      try {
+        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        await twilioClient.messages.create({ from: to, to: from, body: route.reply });
+        console.log(`[WhatsApp] Casual reply sent to ${from}`);
+      } catch (err) {
+        console.error("Casual reply error:", err.message);
+      }
+    });
+    return;
+  }
 
   // Process fact-check asynchronously and send reply via Twilio REST API
   setImmediate(async () => {
@@ -325,6 +354,8 @@ app.post("/webhook/telegram", async (req, res) => {
   if (!message.text && !message.fileId) return;
 
   try {
+    const isFirst = !firstMessageUsers.has(message.chatId);
+    firstMessageUsers.add(message.chatId);
     sendChatAction(message.chatId, "typing");
 
     let imageDataUrl = null;
