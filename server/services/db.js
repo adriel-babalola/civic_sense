@@ -142,6 +142,20 @@ export async function searchArticles(claim, limit = 8) {
   }
 }
 
+export async function getLatestArticles(limit = 6) {
+  try {
+    await connectDB();
+    if (!isDbConnected()) return [];
+    return await Article.find()
+      .sort({ pubDate: -1, createdAt: -1 })
+      .limit(limit)
+      .lean();
+  } catch (err) {
+    console.error(`DB latest articles error: ${err.message}`);
+    return [];
+  }
+}
+
 export async function countArticles() {
   try {
     await connectDB();

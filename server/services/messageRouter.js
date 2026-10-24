@@ -1,3 +1,5 @@
+import { normalizePhoneNumber } from "../utils/phone.js";
+
 const MENU = [
   "CivicSense can help you check political information.",
   "\nReply with a number:",
@@ -24,6 +26,7 @@ const CASUAL_MESSAGES = new Map([
   ["thank you", `You are welcome!\n\n${DROPDOWN_OPTIONS}`],
 ]);
 
+// Shared prompt state map — used by messageRouter and server.js
 const PROMPT_STATES = new Map();
 
 const HELP_MESSAGES = new Set([
@@ -58,40 +61,29 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
   const normalized = normalizeMessage(text);
   if (!normalized) return { intent: "unclear" };
 
+  const stateKey = normalizePhoneNumber(userId);
+  const state = PROMPT_STATES.get(stateKey) || "";
+
+  // Handle yes/no first (before menuReply), since "yes"/"no" are not MENU_REPLIES keys
+  if (normalized === "yes" || normalized === "no") {
+    if (state === "awaiting_yes_no") {
+      if (normalized === "yes") {
+        PROMPT_STATES.set(stateKey, "awaiting_dropdown");
+        return { intent: "casual", reply: DROPDOWN_OPTIONS };
+      }
+      PROMPT_STATES.delete(stateKey);
+      return { intent: "casual", reply: "Okay — reply with a number 1-5, or send me a claim or image to get started." };
+    }
+    if (state === "awaiting_dropdown") {
+      PROMPT_STATES.delete(stateKey);
+    }
+  }
+
   const menuReply = MENU_REPLIES.get(normalized);
   if (menuReply) {
-    // Define state once at the top
-    const state = PROMPT_STATES.get(userId) || "";
-    
-    // Check for numbers 1-5 first (before yes/no check)
-    if (["1", "2", "3", "4", "5"].includes(normalized)) {
-      if (state === "awaiting_numbers") {
-        PROMPT_STATES.delete(userId);
-        return { intent: "menu-option", reply: menuReply };
-      }
-      return { intent: "menu-option", reply: menuReply };
-    }
-
-    if (normalized === "yes" || normalized === "no") {
-      if (normalized === "yes") {
-        PROMPT_STATES.set(userId, "awaiting_dropdown");
-        return { intent: "casual", reply: DROPDOWN_OPTIONS };
-      }
-      if (normalized === "no") {
-        PROMPT_STATES.delete(userId);
-        return { intent: "menu-option", reply: menuReply };
-      }
-    }
-    // Handle awaiting_numbers state for yes/no
-    if (state === "awaiting_numbers") {
-      if (normalized === "yes") {
-        PROMPT_STATES.set(userId, "awaiting_dropdown");
-        return { intent: "casual", reply: DROPDOWN_OPTIONS };
-      }
-      if (normalized === "no") {
-        PROMPT_STATES.delete(userId);
-        return { intent: "menu-option", reply: menuReply };
-      }
+    PROMPT_STATES.delete(stateKey);
+    if (normalized === "1") {
+      return { intent: "news", reply: menuReply };
     }
     return { intent: "menu-option", reply: menuReply };
   }
@@ -113,4 +105,4 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
   return { intent: "fact-check" };
 }
 
-export { MENU, DROPDOWN_OPTIONS };
+export { MENU, DROPDOWN_OPTIONS, PROMPT_STATES };
