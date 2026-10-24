@@ -24,6 +24,8 @@ const CASUAL_MESSAGES = new Map([
   ["thank you", `You are welcome!\n\n${DROPDOWN_OPTIONS}`],
 ]);
 
+const PROMPT_STATES = new Map();
+
 const HELP_MESSAGES = new Set([
   "help",
   "what can you do",
@@ -33,14 +35,9 @@ const HELP_MESSAGES = new Set([
 const MENU_REPLIES = new Map([
   ["1", "Send me the political claim you want me to fact-check."],
   ["2", "Send me the screenshot or image you want me to check."],
-  [
-    "3",
-    "Send me a political claim or screenshot. I search available sources, compare the evidence, and return a sourced verdict. I do not need your name or an account.",
-  ],
-  [
-    "4",
-    "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion",
-  ],
+  ["3", "CivicSense is a non-partisan fact-checking bot that verifies political claims by searching multiple sources, comparing evidence, and returning a sourced verdict. I do not collect your name or require an account. Reply '1' to fact-check a claim, or send me a claim or image to get started."],
+  ["4", "Privacy policy: https://civicsense.fyi/privacy\nData deletion: https://civicsense.fyi/data-deletion"],
+  ["5", "Pull latest nightly news"],
 ]);
 
 function normalizeMessage(text) {
@@ -50,10 +47,11 @@ function normalizeMessage(text) {
     .toLowerCase();
 }
 
-export function routeMessage(text, { hasImage = false, isFirstMessage = false } = {}) {
+export function routeMessage(text, { hasImage = false, isFirstMessage = false, userId } = {}) {
   if (hasImage) return { intent: "fact-check" };
 
   if (isFirstMessage) {
+    PROMPT_STATES.delete(userId);
     return { intent: "casual", reply: DROPDOWN_OPTIONS };
   }
 
@@ -61,7 +59,20 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false } 
   if (!normalized) return { intent: "unclear" };
 
   const menuReply = MENU_REPLIES.get(normalized);
-  if (menuReply) return { intent: "menu-option", reply: menuReply };
+  if (menuReply) {
+    if (normalized === "yes" || normalized === "no") {
+      const state = PROMPT_STATES.get(userId) || "";
+      if (normalized === "yes") {
+        PROMPT_STATES.set(userId, "awaiting_dropdown");
+        return { intent: "casual", reply: DROPDOWN_OPTIONS };
+      }
+      if (normalized === "no") {
+        PROMPT_STATES.delete(userId);
+        return { intent: "menu-option", reply: menuReply };
+      }
+    }
+    return { intent: "menu-option", reply: menuReply };
+  }
 
   const casualReply = CASUAL_MESSAGES.get(normalized);
   if (casualReply) return { intent: "casual", reply: casualReply };
