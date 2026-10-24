@@ -60,8 +60,19 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
 
   const menuReply = MENU_REPLIES.get(normalized);
   if (menuReply) {
+    // Define state once at the top
+    const state = PROMPT_STATES.get(userId) || "";
+    
+    // Check for numbers 1-5 first (before yes/no check)
+    if (["1", "2", "3", "4", "5"].includes(normalized)) {
+      if (state === "awaiting_numbers") {
+        PROMPT_STATES.delete(userId);
+        return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
+      }
+      return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
+    }
+
     if (normalized === "yes" || normalized === "no") {
-      const state = PROMPT_STATES.get(userId) || "";
       if (normalized === "yes") {
         PROMPT_STATES.set(userId, "awaiting_dropdown");
         return { intent: "casual", reply: DROPDOWN_OPTIONS };
@@ -71,7 +82,7 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
         return { intent: "menu-option", reply: menuReply };
       }
     }
-    // Handle awaiting_numbers state
+    // Handle awaiting_numbers state for yes/no
     if (state === "awaiting_numbers") {
       if (normalized === "yes") {
         PROMPT_STATES.set(userId, "awaiting_dropdown");
@@ -79,11 +90,7 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
       }
       if (normalized === "no") {
         PROMPT_STATES.delete(userId);
-        // Continue with number-based flow - treat input as next number choice
-        if (["1", "2", "3", "4", "5"].includes(normalized)) {
-          return { intent: "menu-option", reply: MENU_REPLIES[normalized] };
-        }
-        return { intent: "unclear", reply: `Please type a number 1-5 or "yes" to go back to dropdown.` };
+        return { intent: "menu-option", reply: menuReply };
       }
     }
     return { intent: "menu-option", reply: menuReply };
