@@ -13,8 +13,6 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,
-    // The API base is same-origin in production, so local development has to
-    // behave the same way or a working build fails only once deployed.
     proxy: {
       "/api": {
         target: process.env.VITE_API_URL || "http://localhost:3000",

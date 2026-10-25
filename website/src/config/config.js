@@ -63,8 +63,11 @@ export const FEATURES = {
   reports: env.VITE_FEATURE_REPORTS !== "false",
 };
 
+const API_BASE_URL = (env.VITE_API_URL || "https://civic-sense-bot-server.onrender.com").replace(/\/+$/, "");
+
 export const CONFIG = {
   SITE_URL,
+  API_BASE_URL,
   WHATSAPP: {
     e164: WHATSAPP_NUMBER_E164,
     display: WHATSAPP_DISPLAY,
