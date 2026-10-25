@@ -84,8 +84,6 @@ const adminUserSchema = new mongoose.Schema(
     autoIndex: true,
   }
 );
-adminUserSchema.index({ email: 1 });
-
 const AdminUser = mongoose.model("AdminUser", adminUserSchema);
 
 const profileSuggestionSchema = new mongoose.Schema(
