@@ -624,6 +624,121 @@ export const PHOTO_PACK = [
     "author": null,
     "rosterId": null
   }
+,
+  {
+    "order": 101,
+    "folder": "research-new-photos",
+    "packName": "Ada Elizabeth Fredrick Okwori",
+    "asset": "pack-ada-elizabeth-fredrick-okwori",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "330x414",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "ada-elizabeth-fredrick-okwori"
+  },
+  {
+    "order": 102,
+    "folder": "research-new-photos",
+    "packName": "Peter Ada Agada",
+    "asset": "pack-peter-ada-agada",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "684x624",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "peter-ada-agada"
+  },
+  {
+    "order": 103,
+    "folder": "research-new-photos",
+    "packName": "Nkem Esther Okereke",
+    "asset": "pack-nkem-esther-okereke",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "607x700",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "nkem-esther-okereke"
+  },
+  {
+    "order": 104,
+    "folder": "research-new-photos",
+    "packName": "Oluseyi Abiodun Makinde",
+    "asset": "pack-oluseyi-abiodun-makinde",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "594x700",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "oluseyi-abiodun-makinde"
+  },
+  {
+    "order": 105,
+    "folder": "research-new-photos",
+    "packName": "Adebayo Adewole Ebenezer",
+    "asset": "pack-adebayo-adewole-ebenezer",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "648x516",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "adebayo-adewole-ebenezer"
+  },
+  {
+    "order": 106,
+    "folder": "research-new-photos",
+    "packName": "Adebayo Adewale Ebenezer",
+    "asset": "pack-adebayo-adewale-ebenezer",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "768x432",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "adebayo-adewale-ebenezer"
+  },
 ];
 
 /**
@@ -1066,6 +1181,97 @@ export const PACK_PHOTO_CREDITS = Object.fromEntries([
       "packFolder": "30 - Barau Jibrin"
     }
   ]
+,
+  [
+    "pack-ada-elizabeth-fredrick-okwori",
+    {
+      "file": "pack-ada-elizabeth-fredrick-okwori",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Ada Elizabeth Fredrick Okwori",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
+  [
+    "pack-peter-ada-agada",
+    {
+      "file": "pack-peter-ada-agada",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Peter Ada Agada",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
+  [
+    "pack-nkem-esther-okereke",
+    {
+      "file": "pack-nkem-esther-okereke",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Nkem Esther Okereke",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
+  [
+    "pack-oluseyi-abiodun-makinde",
+    {
+      "file": "pack-oluseyi-abiodun-makinde",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Oluseyi Abiodun Makinde",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
+  [
+    "pack-adebayo-adewole-ebenezer",
+    {
+      "file": "pack-adebayo-adewole-ebenezer",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Adebayo Adewole Ebenezer",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
+  [
+    "pack-adebayo-adewale-ebenezer",
+    {
+      "file": "pack-adebayo-adewale-ebenezer",
+      "author": "Unknown",
+      "license": "Licence not verified",
+      "licenseUrl": null,
+      "source": "https://www.inecnigeria.org/",
+      "sourceLabel": "INEC",
+      "title": "Adebayo Adewale Ebenezer",
+      "taken": null,
+      "packFolder": "research-new-photos",
+      "unverified": true
+    }
+  ],
 ]);
 
 /** Entries whose licence was actually confirmed. */
