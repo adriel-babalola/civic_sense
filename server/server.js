@@ -1,5 +1,4 @@
 import express from "express";
-import twilio from "twilio";
 import cors from "cors";
 import dotenv from "dotenv";
 import compression from "compression";
@@ -287,96 +286,6 @@ app.post("/webhook/meta", async (req, res) => {
           message.from,
           "Sorry, I couldn't process that. Please try again with a text claim."
         );
-      } catch (sendErr) {
-        console.error("Failed to send error reply:", sendErr.message);
-      }
-    }
-  });
-});
-
-app.post("/webhook", async (req, res) => {
-  const message = (req.body.Body || "").trim();
-  const from = req.body.From;
-  const to = req.body.To;
-  const numMedia = parseInt(req.body.NumMedia || "0", 10);
-  const mediaUrl = numMedia > 0 ? req.body.MediaUrl0 : null;
-
-  if (!message && !mediaUrl) {
-    return res.status(400).send("No message");
-  }
-
-  console.log(`Incoming from ${from}: "${message}" media=${numMedia}`);
-
-  // Immediately respond with empty TwiML to avoid Twilio's 15-second timeout.
-  // The actual fact-check result will be sent asynchronously via the REST API.
-  const twiml = new twilio.twiml.MessagingResponse();
-  res.type("text/xml");
-  res.status(200).send(twiml.toString());
-
-  const isFirst = !firstMessageUsers.has(from);
-  firstMessageUsers.add(from);
-  const route = routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst, userId: from });
-  if (route.intent !== "fact-check") {
-    setImmediate(async () => {
-      try {
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-        let combinedReply = route.reply;
-        // Add prompt if user is in pending prompt state
-        const promptState = promptStates.get(from);
-        if (promptState === "awaiting_yes_no") {
-          combinedReply = `${route.reply}\n\nDo you want to go back to dropdown? Type yes or no`;
-        } else if (promptState === "awaiting_dropdown") {
-          // User already said yes, dropdown was shown, reset state
-          promptStates.delete(from);
-        }
-        await twilioClient.messages.create({ from: to, to: from, body: combinedReply });
-        console.log(`[WhatsApp] Casual reply sent to ${from}`);
-      } catch (err) {
-        console.error("Casual reply error:", err.message);
-      }
-    });
-    return;
-  }
-
-  // Process fact-check asynchronously and send reply via Twilio REST API
-  setImmediate(async () => {
-    try {
-      let imageDataUrl = null;
-      if (mediaUrl) {
-        const remote = await imageFromUrl(mediaUrl);
-        if (remote) imageDataUrl = remote.dataUrl;
-      }
-
-      const result = await runFactCheck({ claim: message, imageDataUrl, caption: message });
-
-      await saveFactCheck({
-        claim: result.claim || message,
-        verdict: result.verdict,
-        channel: "whatsapp",
-        hashedFrom: from,
-        timestamp: new Date(),
-      }).catch((err) => console.error("DB save error:", err.message));
-
-      // Send the verdict back via Twilio REST API
-      const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await twilioClient.messages.create({
-        from: to,   // The Twilio WhatsApp number that received the message
-        to: from,   // The user who sent the message
-        body: result.verdict,
-      });
-      promptStates.set(normalizePhoneNumber(from), "awaiting_numbers");
-      console.log(`[WhatsApp] Reply sent to ${from}`);
-    } catch (err) {
-      console.error("Webhook async error:", err);
-      // Attempt to send error message back to user
-      try {
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({
-          from: to,
-          to: from,
-          body: "Sorry, I couldn't process that. Please try again with a text claim.",
-        });
       } catch (sendErr) {
         console.error("Failed to send error reply:", sendErr.message);
       }
