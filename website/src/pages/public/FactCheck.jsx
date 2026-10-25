@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, ImageIcon, Loader2, RotateCcw, Send } from "lucide-react";
 import { CONFIG } from "../../config/config";
-import { runSampleFactCheck } from "../../data/demo-data";
 import { Container, PageHeader, SectionHeading } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Alert } from "../../components/shared/Field";
@@ -54,10 +53,30 @@ export function FactCheck() {
     setResult(null);
 
     try {
-      // Brief delay so the pending state is legible. The real pipeline takes
-      // seconds, and an instant result reads as a cached page rather than a check.
-      await new Promise((resolve) => setTimeout(resolve, 900));
-      setResult(runSampleFactCheck(claim.trim() || caption.trim() || "image"));
+      const formData = new FormData();
+      const claimText = claim.trim() || caption.trim();
+      if (claimText) {
+        formData.append("claim", claimText);
+      }
+      if (caption.trim()) {
+        formData.append("caption", caption.trim());
+      }
+      if (image instanceof File) {
+        formData.append("image", image);
+      }
+
+      const apiBase = CONFIG.API_BASE_URL || "";
+      const response = await fetch(`${apiBase}/api/factcheck`, {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to check claim");
+      }
+
+      setResult(data.data);
     } catch (err) {
       setError(err);
     } finally {
@@ -86,14 +105,6 @@ export function FactCheck() {
             description="Write the claim, or drop in a screenshot of the poster saying it. You get a verdict and the reporting behind it."
             className="border-b-0 pb-0"
           />
-        </div>
-
-        <div className="mx-auto mt-6 max-w-3xl">
-          <SampleBanner>
-            No fact-checking server is connected to this deployment, so checks are answered
-            from a small bundled sample index. The verdict is not a real finding. Send the claim
-            to the bot to have it genuinely checked.
-          </SampleBanner>
         </div>
 
         <div className="mx-auto mt-4 max-w-3xl">
@@ -136,10 +147,7 @@ export function FactCheck() {
                 disabled={!canSubmit}
               >
                 {isRunning ? (
-                  <>
-                    <Loader2 size={15} className="cs-spinner" aria-hidden="true" />
-                    Checking sources
-                  </>
+                  "Checking sources"
                 ) : (
                   <>
                     <Send size={15} aria-hidden="true" />
@@ -283,11 +291,6 @@ function ResultPanel({ result, error, isRunning }) {
 
   return (
     <div className="cs-enter space-y-3">
-      <SampleBanner>
-        Sample verdict from the bundled index, not a real fact-check. Nothing here has been
-        independently verified.
-      </SampleBanner>
-
       <VerdictCard record={result} />
 
       {result.extractedClaim ? (
