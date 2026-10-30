@@ -7,7 +7,6 @@ import rateLimit from "express-rate-limit";
 import multer from "multer";
 dotenv.config();
 
-import { normalizePhoneNumber } from "./utils/phone.js";
 import { runFactCheck } from "./services/pipeline.js";
 import {
   connectDB,
@@ -36,7 +35,7 @@ import {
   sendTextMessage as sendMetaTextMessage,
   downloadMedia as downloadMetaMedia,
 } from "./services/metaWhatsapp.js";
-import { routeMessage, PROMPT_STATES } from "./services/messageRouter.js";
+import { routeMessage } from "./services/messageRouter.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
 
 const app = express();
@@ -47,9 +46,6 @@ app.use(express.json({
   limit: "10mb",
   verify: (req, res, buffer) => { req.rawBody = buffer; },
 }));
-
-// Track users who have sent their first message
-const firstMessageUsers = new Set();
 
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
 const upload = multer({
@@ -198,9 +194,9 @@ async function buildNightlyNewsDigest() {
     await syncOnce().catch((err) => console.error(`[News] syncOnce failed: ${err.message}`));
     articles = await getLatestArticles(6);
   }
-  const prompt = "\n\nDo you want to go back to dropdown? Type yes or no";
+  const prompt = "\n\nWant any of these checked? Just send the claim.";
   if (articles.length === 0) {
-    return `\ud83d\udcf0 No fresh news right now \u2014 the scraper hasn't synced yet. Try again in a few minutes.${prompt}`;
+    return `\ud83d\udcf0 No fresh news right now \u2014 the scraper hasn't synced yet. Try again in a few minutes.`;
   }
   const lines = articles.map((a, i) => {
     const title = (a.title || "Untitled").trim();
@@ -236,16 +232,13 @@ app.post("/webhook/meta", async (req, res) => {
   );
   res.send("ok");
 
-  const isFirst = !firstMessageUsers.has(message.from);
-  firstMessageUsers.add(message.from);
-  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst, userId: message.from });
+  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId) });
 
   if (route.intent === "news") {
     setImmediate(async () => {
       try {
         const digest = await buildNightlyNewsDigest();
         await sendMetaTextMessage(message.from, digest);
-        PROMPT_STATES.set(normalizePhoneNumber(message.from), "awaiting_yes_no");
         console.log(`[Meta] News digest sent to ${message.from}`);
       } catch (err) {
         console.error("Meta news digest error:", err.message);
@@ -255,15 +248,7 @@ app.post("/webhook/meta", async (req, res) => {
   }
 
   if (route.intent !== "fact-check") {
-    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-    let combinedReply = route.reply;
-    // Add prompt if user is in pending prompt state
-    const promptState = PROMPT_STATES.get(normalizePhoneNumber(message.from));
-    if (promptState === "awaiting_dropdown") {
-      PROMPT_STATES.delete(normalizePhoneNumber(message.from));
-    }
-    // If user just said yes/no, the routeMessage already handled it
-    // Send the reply
+    const combinedReply = route.reply;
     console.log(`[Meta] Casual reply to=${message.from} intent=${route.intent} reply="${combinedReply ? combinedReply.substring(0, 80) : "EMPTY"}..."`);
     return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
       const metaErr = err.response?.data || {};
@@ -295,8 +280,7 @@ app.post("/webhook/meta", async (req, res) => {
         routerSource: route.router?.source || null,
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
-      await sendMetaTextMessage(message.from, `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`);
-      PROMPT_STATES.set(normalizePhoneNumber(message.from), "awaiting_yes_no");
+      await sendMetaTextMessage(message.from, `${result.verdict}\n\nSend me another claim anytime.`);
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
       console.error("Meta webhook async error:", err);
@@ -331,9 +315,7 @@ app.post("/webhook", async (req, res) => {
   res.type("text/xml");
   res.status(200).send(twiml.toString());
 
-  const isFirst = !firstMessageUsers.has(from);
-  firstMessageUsers.add(from);
-  const route = await routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst, userId: from });
+  const route = await routeMessage(message, { hasImage: Boolean(mediaUrl) });
 
   if (route.intent === "news") {
     setImmediate(async () => {
@@ -341,7 +323,6 @@ app.post("/webhook", async (req, res) => {
         const digest = await buildNightlyNewsDigest();
         const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
         await twilioClient.messages.create({ from: to, to: from, body: digest });
-        PROMPT_STATES.set(normalizePhoneNumber(from), "awaiting_yes_no");
         console.log(`[WhatsApp] News digest sent to ${from}`);
       } catch (err) {
         console.error("WhatsApp news digest error:", err.message);
@@ -354,14 +335,7 @@ app.post("/webhook", async (req, res) => {
     setImmediate(async () => {
       try {
         const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-        let combinedReply = route.reply;
-        // Add prompt if user is in pending prompt state
-        const promptState = PROMPT_STATES.get(normalizePhoneNumber(from));
-        if (promptState === "awaiting_dropdown") {
-          PROMPT_STATES.delete(normalizePhoneNumber(from));
-        }
-        await twilioClient.messages.create({ from: to, to: from, body: combinedReply });
+        await twilioClient.messages.create({ from: to, to: from, body: route.reply });
         console.log(`[WhatsApp] Casual reply sent to ${from}`);
       } catch (err) {
         console.error("Casual reply error:", err.message);
@@ -397,9 +371,8 @@ app.post("/webhook", async (req, res) => {
       await twilioClient.messages.create({
         from: to,   // The Twilio WhatsApp number that received the message
         to: from,   // The user who sent the message
-        body: `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`,
+        body: `${result.verdict}\n\nSend me another claim anytime.`,
       });
-      PROMPT_STATES.set(normalizePhoneNumber(from), "awaiting_yes_no");
       console.log(`[WhatsApp] Reply sent to ${from}`);
     } catch (err) {
       console.error("Webhook async error:", err);
@@ -435,32 +408,21 @@ app.post("/webhook/telegram", async (req, res) => {
   if (!message.text && !message.fileId) return;
 
   try {
-    const isFirst = !firstMessageUsers.has(message.chatId);
-    firstMessageUsers.add(message.chatId);
     sendChatAction(message.chatId, "typing");
 
-    const chatIdKey = String(message.chatId);
     const route = await routeMessage(message.text, {
       hasImage: Boolean(message.fileId),
-      isFirstMessage: isFirst,
-      userId: chatIdKey,
     });
 
     if (route.intent === "news") {
       const digest = await buildNightlyNewsDigest();
       await sendMessage(message.chatId, digest);
-      PROMPT_STATES.set(normalizePhoneNumber(chatIdKey), "awaiting_yes_no");
       console.log(`[Telegram] News digest sent to ${message.chatId}`);
       return;
     }
 
     if (route.intent !== "fact-check") {
-      let combinedReply = route.reply;
-      const promptState = PROMPT_STATES.get(normalizePhoneNumber(chatIdKey));
-      if (promptState === "awaiting_dropdown") {
-        PROMPT_STATES.delete(normalizePhoneNumber(chatIdKey));
-      }
-      await sendMessage(message.chatId, combinedReply);
+      await sendMessage(message.chatId, route.reply);
       return;
     }
 
@@ -484,14 +446,10 @@ app.post("/webhook/telegram", async (req, res) => {
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
 
-    const combinedReply = `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`;
-
-    await sendMessage(message.chatId, combinedReply);
-      PROMPT_STATES.set(normalizePhoneNumber(message.chatId.toString()), "awaiting_yes_no");
+    await sendMessage(message.chatId, `${result.verdict}\n\nSend me another claim anytime.`);
   } catch (err) {
     console.error("Telegram webhook error:", err);
-    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-    await sendMessage(message.chatId, `Sorry, I couldn't process that. Please try again with a text claim.${welcomeMsg ? `\n\n${welcomeMsg}` : ""}`);
+    await sendMessage(message.chatId, "Sorry, I couldn't process that. Please try again with a text claim.");
   }
 });
 

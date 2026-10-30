@@ -1,68 +1,58 @@
 # CivicSense Bot - Deployment & Debug Procedure
 
-> Last updated: Oct 30, 2026 — LLM intent router added (Groq primary, OpenRouter fallback); routeMessage now async
+> Last updated: Oct 30, 2026 — Menu 1-5 removed; bot is fully conversational (LLM intent router + static-reply templates, AI replies behind `ROUTER_STATIC_REPLIES=false`)
 
 ## Current Working State
 
 - **Branch:** `feat/privacy-policy`
-- **Latest commit:** `cbfbc93` — news digest + state unification + yes/no fix + Telegram routing
+- **Latest commit:** `2bd0957` — LLM intent router added (Groq primary, OpenRouter fallback); routeMessage now async
 - **Server:** Render — `https://civic-sense-8d2m.onrender.com`
-- **Status:** ✅ Dropdown 1-5, nightly news digest, post-task yes/no prompt all working
+- **Status:** ✅ Conversational routing live-ready — free text in, intent-routed action out; no menus, no numbered options, no conversation state
 
 ---
 
 ## Features Implemented
 
-### 1. Dropdown with Numbers 1-5
-- `DROPDOWN_OPTIONS` in `messageRouter.js` shows numbered options:
-  ```
-  1. 📰 Pull latest nightly news
-  2. 🔍 Fact-check a claim
-  3. 📸 Check an image
-  4. ℹ️ How CivicSense works
-  5. 🔒 Privacy and data deletion
-  ```
-- User sends "hi"/"hello"/"hey" → dropdown appears
-- `MENU_REPLIES` is keyed "1"–"5" and **must stay aligned** with `DROPDOWN_OPTIONS`
+### 1. Conversational routing (menu 1-5 REMOVED)
+- There is **no dropdown, no numbers, no yes/no loop**. `MENU`, `DROPDOWN_OPTIONS`, `MENU_REPLIES`, `PROMPT_STATES`, `normalizePhoneNumber` and first-message tracking are gone from `messageRouter.js` / `server.js`
+- Every incoming message goes: webhook acks instantly → structural guards (image → fact-check, empty → clarify, pure digits/phone → clarify without any LLM call) → **LLM classifies free text** → bot acts
+- A user who sends `hi` gets a conversational greeting template, not a menu. A user who sends `5` gets "Say that again for me..."
+- `utils/phone.js` (`normalizePhoneNumber`) is now **unused** by the bot (kept only for the audit trail)
 
-### 2. Nightly News Digest (option 1)
-- Option "1" returns `{ intent: "news" }` from `routeMessage`
+### 2. Nightly News Digest
+- `news_update` intent (e.g. "latest news on fuel subsidy") returns `{ intent: "news" }` from `routeMessage`
 - `server.js` `buildNightlyNewsDigest()`:
   - Fetches 6 newest articles via `getLatestArticles()` (MongoDB, sorted by `pubDate`)
   - If DB empty → runs `syncOnce()` (RSS fetch of 17 NG feeds) and retries
   - Formats numbered digest: title • source • date • link
-  - Appends yes/no prompt
+  - Appends "Want any of these checked? Just send the claim."
 - Handled in **all 3 webhooks**: Meta, Twilio WhatsApp, Telegram
 
-### 3. Post-Task Yes/No Prompt
-- After each verdict AND after news digest, bot sends: `"Do you want to go back to dropdown? Type yes or no"`
-- User says **yes** → dropdown reappears, state → `awaiting_dropdown`
-- User says **no** → ack "Okay — reply with a number 1-5...", state cleared
-- Numbers 1-5 work at any time (clear state, execute menu action)
+### 3. Post-verdict closer
+- After each verdict the bot sends: `"...verdict...\n\nSend me another claim anytime."`
+- Nothing is remembered between messages (stateless by design) — the next message is classified fresh
 
-### 4. Universal Phone Number Normalization
-- `normalizePhoneNumber()` lives in **`server/utils/phone.js`** (shared by server.js + messageRouter.js)
-- Ensures consistent Map keys: `+2347063373229` regardless of input format
-
-### 5. State Management (UNIFIED)
-- **Single shared `PROMPT_STATES` Map** — defined in `messageRouter.js`, exported, imported by `server.js`
-- States: `awaiting_yes_no` (after verdict/news), `awaiting_dropdown` (after user says yes)
-- State keys always `normalizePhoneNumber(userId)`
-
-### 6. LLM Intent Router (NEW — Oct 30, 2026)
+### 4. LLM Intent Router
 - `server/services/intentRouter.js` — classifies every free-text message BEFORE the bot picks an action
-- Flow: webhook acks immediately → structural checks (image / first-msg / digits / yes-no, all deterministic) → **LLM classifies remaining free text** → bot dispatches
+- Flow: webhook acks immediately → structural checks → **LLM classifies remaining free text** → bot dispatches
 - Tags: `fact_checking` | `news_update` | `general_query` | `off_topic`
 - Also extracts a **clean `search_query`** (≤12 words English) from multi-paragraph / Pidgin input — fed to Tavily + the article index by `pipeline.js`
 - Providers: **Groq primary** (`ROUTER_MODEL_GROQ`, default `llama-3.1-8b-instant`, JSON mode) → **OpenRouter fallback** (`ROUTER_MODEL_OR`, default `google/gemini-2.0-flash-lite`) → JSON-repair retry → heuristic keyword fallback
-- Zero reasoning: system prompt forbids prose, `temperature: 0`, `max_tokens: 150`, `response_format: json_object` on Groq, 6 few-shot examples
+- Zero reasoning: system prompt forbids prose, `temperature: 0`, `max_tokens: 150`, `response_format: json_object` on Groq, 7 few-shot examples
 - Latency budget: `ROUTER_TIMEOUT_MS=1200` per call, `ROUTER_BUDGET_MS=2000` total hard cap, then heuristic (0ms)
-- Low confidence (< `ROUTER_MIN_CONFIDENCE=0.55`) → ambiguous → bot replies with the dropdown instead of guessing
+- Low confidence (< `ROUTER_MIN_CONFIDENCE=0.55`) → ambiguous → bot asks the user to clarify instead of guessing. **Exception: `fact_checking` always executes**, even at low confidence (a weak claim is still better checked than dropped)
 - Circuit breaker: 5 consecutive LLM failures → 60s of heuristic-only routing (bot never goes dark)
-- Results cached in the existing LRU (`route:<normalized text>` keys)
-- `routeMessage()` is now **async** — all 3 webhooks `await` it (safe: each acks Meta/Twilio/Telegram first)
-- Mapping: `fact_checking` → fact-check pipeline (with `searchQuery`), `news_update` → digest, `general_query` → KB answer if matched else dropdown, `off_topic` → steering reply + menu
-- Observability: `[Router] intent=... source=groq|openrouter|cache|heuristic conf=... ...ms` log line; `intent`, `searchQuery`, `routerSource` saved on each FactCheck doc
+- Results cached in the existing LRU (`route:<normalized text>` keys); cache stores the raw LLM reply and the reply is re-composed on hit
+- `routeMessage()` is **async** — all 3 webhooks `await` it (safe: each acks Meta/Twilio/Telegram first)
+- Mapping: `fact_checking` → fact-check pipeline (with `searchQuery`), `news_update` → digest, `general_query` → KB answer if matched else conversational reply, `off_topic` → steering reply
+- Observability: `[Router] intent=... source=groq|openrouter|cache|heuristic conf=... mode=ai|static reply="..."` log line; `intent`, `searchQuery`, `routerSource` saved on each FactCheck doc
+
+### 5. Reply modes — static templates now, AI replies later (Option B)
+- `ROUTER_STATIC_REPLIES` (Render env var, **no code deploy needed to flip**):
+  - `"true"` (default / launch): user-facing replies for `general_query` / `off_topic` come from hand-written `STATIC_REPLIES` templates in `intentRouter.js` (greeting / thanks / how / offTopic / clarify). LLM output `reply` is **discarded** — only intent + search_query are used. Prompt sent to the LLM omits all reply rules (faster, cheaper)
+  - `"false"`: the LLM writes the conversational replies (prompt includes reply rules + reply field in schema and few-shots). LLM reply is whitespace-collapsed and capped at 600 chars
+- `fact_checking` and `news_update` replies are always deterministic (pipeline verdict / digest) in both modes
+- **Flip procedure:** review `[Router]` logs + saved FactCheck docs for a few days → Render Dashboard → Environment → set `ROUTER_STATIC_REPLIES=false` → **Save** (Render restarts automatically, no deploy)
 
 ---
 
@@ -70,18 +60,20 @@
 
 | File | Purpose |
 |------|---------|
-| `server/utils/phone.js` | Shared `normalizePhoneNumber()` |
-| `server/services/messageRouter.js` | Dropdown, routing, **shared PROMPT_STATES**, async LLM dispatch |
-| `server/services/intentRouter.js` | **LLM intent classifier** — Groq → OpenRouter → heuristic + circuit breaker |
-| `server/server.js` | Webhooks (Meta/Twilio/Telegram), `buildNightlyNewsDigest()`, verdict sends |
+| `server/services/messageRouter.js` | Async routing: image/empty guards → classifyIntent → intent mapping. No menu, no state |
+| `server/services/intentRouter.js` | **LLM intent classifier** — Groq → OpenRouter → heuristic + circuit breaker + `STATIC_REPLIES` templates + `ROUTER_STATIC_REPLIES` mode switch |
+| `server/server.js` | Webhooks (Meta/Twilio/Telegram), `buildNightlyNewsDigest()`, verdict sends ("Send me another claim anytime.") |
 | `server/services/pipeline.js` | Fact-check orchestrator; threads `searchQuery` into retrieval |
 | `server/services/db.js` | MongoDB models; `getLatestArticles()`, `searchArticles()` |
 | `server/services/scraper.js` | RSS sync of 17 NG feeds → `Article` collection |
 | `server/services/metaWhatsapp.js` | Meta API send/receive, detailed error logging |
+| `server/utils/phone.js` | `normalizePhoneNumber()` — **unused** since the menu removal |
 
 ---
 
 ## Bugs Fixed (Chronological)
+
+> Bugs 1-5 are **pre-router history** — they were menu/state-machine bugs and no longer apply to the current conversational code. Kept for the audit trail.
 
 ### Bug 1: ReferenceError: state is not defined
 - **Fix (`2c0b1cd`):** Define state once at top of menuReply block
@@ -139,24 +131,24 @@ d0758d5 Add detailed Meta API error logging
 
 ## Test Flow (post-deploy)
 
-1. `hi` → dropdown with numbers 1-5
-2. `1` → **📰 Nightly News Digest** with real headlines + links + yes/no prompt
-3. `yes` → dropdown reappears
-4. `2` → "Send me the political claim..."
-5. Send a claim → verdict **+ yes/no prompt** (now actually appears)
-6. `5` → Privacy policy + data deletion links
-7. `4` → How CivicSense works
-8. Telegram: same dropdown flow now works (was fact-check-only before)
-
-### Intent router checks
-9. Send a multi-paragraph claim (Pidgin or English) → server log shows
-   `[Router] intent=fact_checking source=groq conf=0.9x ...ms` (target < 700ms) → verdict uses the distilled query
-10. Send `latest news on fuel subsidy` → digest (no fact-check)
-11. Send a joke / off-topic line → steering reply + dropdown, no fact-check run
-12. Send an ambiguous fragment (`what about that thing`) → "I did not quite catch that" + dropdown
-13. Temporarily unset `GROQ_API_KEY` and `OPENROUTER_API_KEY` → log shows
+1. `hi` → conversational greeting template (no menu)
+2. `latest news on fuel subsidy` → **📰 Nightly News Digest** with real headlines + links + "Want any of these checked? Just send the claim."
+3. Send a claim (e.g. "Did the president visit Lagos yesterday?") → verdict + "Send me another claim anytime."
+4. Send a multi-paragraph / Pidgin claim → server log shows
+   `[Router] intent=fact_checking source=groq conf=0.9x mode=static ...ms` (target < 700ms) → verdict uses the distilled `searchQuery`
+5. Send a joke / off-topic line → steering template ("I only handle Nigerian civic and political claims..."), no fact-check run
+6. Send `5` or `0803 111 2233` → clarify template, **no LLM call** (digit guard, instant)
+7. Send an ambiguous fragment (`what about that thing`) → clarify template ("Say that again for me...")
+8. Send an image (any caption) → straight to fact-check (vision pipeline)
+9. Telegram: same conversational flow
+10. Temporarily unset `GROQ_API_KEY` and `OPENROUTER_API_KEY` → log shows
     `source=heuristic (no_llm_key)`, bot still routes (fails open, never errors)
-14. Local unit tests: `npm run test:router` (router + message router, no live API calls)
+11. Local unit tests: `npm run test:router` (router + message router, no live API calls)
+
+### After a few days of logs (Option B flip)
+12. Skim `[Router]` logs — confirm intents look right and replies read naturally
+13. Render Dashboard → Environment → `ROUTER_STATIC_REPLIES=false` → Save (auto-restart)
+14. Repeat steps 1-5 — `mode=ai` in logs, replies now written by the LLM (varied phrasing, same intent routing)
 
 ---
 
@@ -175,22 +167,26 @@ d0758d5 Add detailed Meta API error logging
 ### News digest empty
 - Check scraper: `GET /api/health` → `articles` count, `scraper.lastSyncAt`
 - Trigger manual sync: `POST /api/scrape?secret=$SCRAPE_SECRET`
-- `syncOnce()` auto-runs if DB empty when user presses 1
+- `syncOnce()` auto-runs if DB empty when a news request comes in
 
 ### MongoDB duplicate index warning
 - `{"email":1}` duplicate — warning only, does NOT affect functionality
 
 ### Intent router
 ```
-[Router] intent=fact_checking source=groq conf=0.92 ambiguous=false 310ms
+[Router] intent=fact_checking source=groq conf=0.92 ambiguous=false mode=static 310ms reply=""
+[Router] intent=general_query source=groq conf=0.97 ambiguous=false mode=static 260ms reply="Hey — I'm CivicSense..."
 [Router] intent=... source=heuristic conf=0.65 (llm_failed) 12ms
 [Router] Circuit open for 60s — heuristic routing only
 ```
+- `mode=static` → templates (launch default). `mode=ai` → LLM-written replies (`ROUTER_STATIC_REPLIES=false`)
+- `reply=""` on general/off-topic in static mode would be a bug — templates should always fill something
 - `source=heuristic (no_llm_key)` → `GROQ_API_KEY` / `OPENROUTER_API_KEY` not set (works, but dumb routing)
 - `source=heuristic (llm_failed)` repeatedly → check Groq status/keys; breaker kicks in after 5 straight failures
-- Replies feel slow → raise nothing, check the `...ms` in the log; budget is `ROUTER_BUDGET_MS` (2000ms hard cap)
-- Wrong intent with high confidence → adjust the few-shot examples in `intentRouter.js` `FEWSHOT`, or raise `ROUTER_MIN_CONFIDENCE`
+- Replies feel slow → check the `...ms` in the log; budget is `ROUTER_BUDGET_MS` (2000ms hard cap)
+- Wrong intent with high confidence → adjust the few-shot examples in `intentRouter.js` `FEWSHOT`, or raise `ROUTER_MIN_CONFIDENCE`. `fact_checking` at low confidence still runs (by design)
 - Groq model deprecation errors → change `ROUTER_MODEL_GROQ` env, no code change
+- AI replies feel robotic after the flip → tune the "reply rules" block in `systemPrompt()` in `intentRouter.js`
 
 ---
 
@@ -203,16 +199,18 @@ d0758d5 Add detailed Meta API error logging
 - `SCRAPE_SECRET` (for `/api/scrape`)
 - `GROQ_API_KEY` (intent router — primary; **set this on Render**), `OPENROUTER_API_KEY` (router fallback + verdict model)
 - Router tuning: `ROUTER_MODEL_GROQ`, `ROUTER_MODEL_OR`, `ROUTER_TIMEOUT_MS`, `ROUTER_BUDGET_MS`, `ROUTER_MIN_CONFIDENCE`
+- `ROUTER_STATIC_REPLIES` (`"true"` = template replies [launch], `"false"` = LLM-written replies — flip via env only, no deploy)
 
 ---
 
 ## TODO / Next Steps
 
-- [ ] Deploy latest commit on Render and run full test flow
+- [ ] Deploy latest commit on Render and run full test flow (conversational, no menu)
 - [ ] Set `GROQ_API_KEY` in Render env (router runs on OpenRouter fallback + heuristic until then)
 - [ ] Live latency check: `[Router]` log stays <700ms p50 / <2000ms worst case
+- [ ] After a few days of logs: flip `ROUTER_STATIC_REPLIES=false` (AI replies), keep watching logs
 - [ ] Create PR `feat/privacy-policy` → `main`
 - [ ] Per-user rate limiting on news digest (avoid repeated syncOnce)
 - [x] Unit tests for `routeMessage()` + intent router (`npm run test:router`)
 - [ ] Fix MongoDB duplicate email index warning in `db.js`
-- [ ] Delete stale `messageRouter.js.bak` / `messageRouter.js.new` files
+- [ ] Delete stale `messageRouter.js.bak` / `messageRouter.js.new` files and now-unused `utils/phone.js`

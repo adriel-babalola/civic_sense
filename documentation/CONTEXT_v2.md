@@ -88,7 +88,7 @@ Stated plainly, because the alternative is a demo that falls over when a judge a
 - **Frontend:** React 19 + Vite + Tailwind 4 + React Router 7
 - **Database:** MongoDB Atlas — FactCheck, Article, Report
 - **AI:** Gemini 2.5 Flash via OpenRouter (verdicts + image claim extraction)
-- **Intent router:** Groq `llama-3.1-8b-instant` primary, OpenRouter `gemini-2.0-flash-lite` fallback, heuristic fail-open — classifies messages and distils search queries before dispatch
+- **Intent router:** Groq `llama-3.1-8b-instant` primary, OpenRouter `gemini-2.0-flash-lite` fallback, heuristic fail-open — classifies messages and distils search queries before dispatch. Bot is fully conversational (no menus); user-facing chat replies ship as hand-written templates with LLM-written replies behind the `ROUTER_STATIC_REPLIES=false` env flip
 - **Search:** Tavily across 16 Nigerian domains, plus an RSS index of 17 feeds
 - **WhatsApp:** Twilio sandbox. **Telegram:** Bot API
 - **Deployment:** Vercel or Netlify (web), Railway (bot)

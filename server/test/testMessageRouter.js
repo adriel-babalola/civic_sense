@@ -1,34 +1,47 @@
 import assert from "node:assert/strict";
-import { MENU, DROPDOWN_OPTIONS, routeMessage } from "../services/messageRouter.js";
+import { routeMessage, STATIC_REPLIES } from "../services/messageRouter.js";
+import { resetRouterState } from "../services/intentRouter.js";
 
 process.env.GROQ_API_KEY = "";
 process.env.OPENROUTER_API_KEY = "";
+delete process.env.ROUTER_STATIC_REPLIES;
+resetRouterState();
 
-assert.equal((await routeMessage("yayy")).intent, "casual");
-assert.equal((await routeMessage("hello")).reply, DROPDOWN_OPTIONS);
-assert.equal((await routeMessage("help")).intent, "help");
-assert.match((await routeMessage("1")).reply, /nightly news/i);
-assert.match((await routeMessage("2")).reply, /political claim/i);
-assert.match((await routeMessage("3")).reply, /image/i);
-assert.match((await routeMessage("4")).reply, /non-partisan/i);
-assert.match((await routeMessage("5")).reply, /data-deletion/);
-assert.equal((await routeMessage("yo")).intent, "unclear");
-assert.match((await routeMessage("yo")).reply, /Reply with a number/);
+const greet = await routeMessage("hello");
+assert.equal(greet.intent, "casual");
+assert.equal(greet.reply, STATIC_REPLIES.greeting);
 
-const claimRoute = await routeMessage("Did the president visit Lagos yesterday?");
-assert.equal(claimRoute.intent, "fact-check");
-assert.ok(claimRoute.searchQuery.length > 0);
+const help = await routeMessage("help");
+assert.equal(help.intent, "casual");
+assert.equal(help.reply, STATIC_REPLIES.how);
 
-assert.equal((await routeMessage("yayy", { hasImage: true })).intent, "fact-check");
-assert.equal((await routeMessage("anything at all", { isFirstMessage: true })).intent, "casual");
+const digit1 = await routeMessage("1");
+assert.equal(digit1.intent, "unclear");
+assert.equal(digit1.reply, STATIC_REPLIES.clarify);
 
-const newsRoute = await routeMessage("latest news on fuel subsidy please");
-assert.equal(newsRoute.intent, "news");
+const digit5 = await routeMessage("5");
+assert.equal(digit5.intent, "unclear");
+assert.equal(digit5.reply, STATIC_REPLIES.clarify);
 
-const greetingRoute = await routeMessage("good morning sir how far");
-assert.equal(greetingRoute.intent, "casual");
-assert.match(greetingRoute.reply, /Pull latest nightly news/);
+const claim = await routeMessage("Did the president visit Lagos yesterday?");
+assert.equal(claim.intent, "fact-check");
+assert.ok(claim.searchQuery.length > 0);
 
-assert.match(MENU, /Reply with a number/);
+const image = await routeMessage("yayy", { hasImage: true });
+assert.equal(image.intent, "fact-check");
+
+const news = await routeMessage("latest news on fuel subsidy please");
+assert.equal(news.intent, "news");
+
+const morning = await routeMessage("good morning sir how far");
+assert.equal(morning.intent, "casual");
+assert.equal(morning.reply, STATIC_REPLIES.greeting);
+
+const empty = await routeMessage("");
+assert.equal(empty.intent, "unclear");
+assert.equal(empty.reply, STATIC_REPLIES.clarify);
+
+const failOpen = await routeMessage("some random chatter that is not a greeting");
+assert.equal(failOpen.intent, "fact-check");
 
 console.log("Message router tests passed.");
