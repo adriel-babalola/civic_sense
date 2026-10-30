@@ -238,7 +238,7 @@ app.post("/webhook/meta", async (req, res) => {
 
   const isFirst = !firstMessageUsers.has(message.from);
   firstMessageUsers.add(message.from);
-  const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst, userId: message.from });
+  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst, userId: message.from });
 
   if (route.intent === "news") {
     setImmediate(async () => {
@@ -283,12 +283,16 @@ app.post("/webhook/meta", async (req, res) => {
         claim: message.text,
         imageDataUrl,
         caption: message.caption || message.text,
+        searchQuery: route.searchQuery,
       });
       await saveFactCheck({
         claim: result.claim || message.text,
         verdict: result.verdict,
         channel: "whatsapp",
         hashedFrom: message.from,
+        intent: route.intent,
+        searchQuery: route.searchQuery || null,
+        routerSource: route.router?.source || null,
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
       await sendMetaTextMessage(message.from, `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`);
@@ -329,7 +333,7 @@ app.post("/webhook", async (req, res) => {
 
   const isFirst = !firstMessageUsers.has(from);
   firstMessageUsers.add(from);
-  const route = routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst, userId: from });
+  const route = await routeMessage(message, { hasImage: Boolean(mediaUrl), isFirstMessage: isFirst, userId: from });
 
   if (route.intent === "news") {
     setImmediate(async () => {
@@ -375,13 +379,16 @@ app.post("/webhook", async (req, res) => {
         if (remote) imageDataUrl = remote.dataUrl;
       }
 
-      const result = await runFactCheck({ claim: message, imageDataUrl, caption: message });
+      const result = await runFactCheck({ claim: message, imageDataUrl, caption: message, searchQuery: route.searchQuery });
 
       await saveFactCheck({
         claim: result.claim || message,
         verdict: result.verdict,
         channel: "whatsapp",
         hashedFrom: from,
+        intent: route.intent,
+        searchQuery: route.searchQuery || null,
+        routerSource: route.router?.source || null,
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
 
@@ -433,7 +440,7 @@ app.post("/webhook/telegram", async (req, res) => {
     sendChatAction(message.chatId, "typing");
 
     const chatIdKey = String(message.chatId);
-    const route = routeMessage(message.text, {
+    const route = await routeMessage(message.text, {
       hasImage: Boolean(message.fileId),
       isFirstMessage: isFirst,
       userId: chatIdKey,
@@ -464,13 +471,16 @@ app.post("/webhook/telegram", async (req, res) => {
       if (remote) imageDataUrl = remote.dataUrl;
     }
 
-    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text });
+    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
 
     await saveFactCheck({
       claim: result.claim || message.text,
       verdict: result.verdict,
       channel: "telegram",
       hashedFrom: String(message.chatId),
+      intent: route.intent,
+      searchQuery: route.searchQuery || null,
+      routerSource: route.router?.source || null,
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
 

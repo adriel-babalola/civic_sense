@@ -20,6 +20,8 @@ services:
         value: info
       - key: OPENROUTER_API_KEY
         sync: false
+      - key: GROQ_API_KEY
+        sync: false
       - key: TAVILY_API_KEY
         sync: false
       - key: MONGODB_URI
@@ -52,6 +54,16 @@ services:
         value: "12000"
       - key: PIPELINE_DEADLINE_MS
         value: "14000"
+      - key: ROUTER_MODEL_GROQ
+        value: llama-3.1-8b-instant
+      - key: ROUTER_MODEL_OR
+        value: google/gemini-2.0-flash-lite
+      - key: ROUTER_TIMEOUT_MS
+        value: "1200"
+      - key: ROUTER_BUDGET_MS
+        value: "2000"
+      - key: ROUTER_MIN_CONFIDENCE
+        value: "0.55"
       - key: SCRAPE_INTERVAL_MIN
         value: "30"
       - key: ARTICLE_TTL_DAYS

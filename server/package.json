@@ -8,6 +8,7 @@
     "test": "node test/testKratos.js",
     "test:pipeline": "node test/testPipeline.js",
     "test:meta": "node test/testMetaWhatsapp.js",
+    "test:router": "node test/testIntentRouter.js && node test/testMessageRouter.js",
     "verify:feeds": "node scripts/verify-feeds.js",
     "setup:telegram": "node scripts/setup-telegram.js"
   },

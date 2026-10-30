@@ -1,4 +1,6 @@
 import { normalizePhoneNumber } from "../utils/phone.js";
+import { classifyIntent } from "./intentRouter.js";
+import { searchKnowledgeBase } from "./gemini.js";
 
 const MENU = [
   "CivicSense can help you check political information.",
@@ -50,7 +52,44 @@ function normalizeMessage(text) {
     .toLowerCase();
 }
 
-export function routeMessage(text, { hasImage = false, isFirstMessage = false, userId } = {}) {
+function kbAnswer(query) {
+  try {
+    const matches = searchKnowledgeBase(query);
+    const top = matches.find((m) => m.verdict && m.verdict !== "UNVERIFIED") || matches[0];
+    if (!top) return null;
+    return `${top.explanation}\n\nSource: ${top.source}\n\n${DROPDOWN_OPTIONS}`;
+  } catch {
+    return null;
+  }
+}
+
+function mapIntent(route) {
+  if (!route || route.ambiguous) {
+    return {
+      intent: "unclear",
+      reply: `I did not quite catch that.\n\n${DROPDOWN_OPTIONS}`,
+      router: route,
+    };
+  }
+  if (route.intent === "news_update") return { intent: "news", router: route };
+  if (route.intent === "fact_checking") {
+    return { intent: "fact-check", searchQuery: route.search_query, router: route };
+  }
+  if (route.intent === "off_topic") {
+    return {
+      intent: "unclear",
+      reply: `I'm built for Nigerian civic and political fact-checking.\n\n${DROPDOWN_OPTIONS}`,
+      router: route,
+    };
+  }
+  if (route.search_query) {
+    const answer = kbAnswer(route.search_query);
+    if (answer) return { intent: "casual", reply: answer, router: route };
+  }
+  return { intent: "casual", reply: DROPDOWN_OPTIONS, router: route };
+}
+
+export async function routeMessage(text, { hasImage = false, isFirstMessage = false, userId } = {}) {
   if (hasImage) return { intent: "fact-check" };
 
   if (isFirstMessage) {
@@ -102,7 +141,13 @@ export function routeMessage(text, { hasImage = false, isFirstMessage = false, u
     };
   }
 
-  return { intent: "fact-check" };
+  let route = null;
+  try {
+    route = await classifyIntent(String(text).trim());
+  } catch (err) {
+    console.error(`[Router] classifyIntent threw: ${err.message}`);
+  }
+  return mapIntent(route);
 }
 
 export { MENU, DROPDOWN_OPTIONS, PROMPT_STATES };

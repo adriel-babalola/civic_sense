@@ -8,9 +8,10 @@ import {
 
 const DEADLINE_MS = Number(process.env.PIPELINE_DEADLINE_MS) || 25000;
 
-export async function runFactCheck({ claim, imageDataUrl, caption }) {
+export async function runFactCheck({ claim, imageDataUrl, caption, searchQuery = "" }) {
   const started = Date.now();
   let extractedClaim = null;
+  const cleanQuery = String(searchQuery || "").trim();
 
   if (imageDataUrl) {
     try {
@@ -28,9 +29,9 @@ export async function runFactCheck({ claim, imageDataUrl, caption }) {
   const deadline = started + DEADLINE_MS;
 
   const [kbMatches, articles, tavilyText] = await Promise.allSettled([
-    Promise.resolve(searchKnowledgeBase(activeClaim)),
-    searchArticlesFromIndex(activeClaim, 6),
-    searchClaim(activeClaim),
+    Promise.resolve(searchKnowledgeBase(cleanQuery || activeClaim)),
+    searchArticlesFromIndex(cleanQuery || activeClaim, 6),
+    searchClaim(activeClaim, cleanQuery),
   ]);
 
   const ctx = {
@@ -45,6 +46,7 @@ export async function runFactCheck({ claim, imageDataUrl, caption }) {
   return {
     claim: claim || extractedClaim,
     extractedClaim,
+    searchQuery: cleanQuery,
     verdict: verdict.formatted,
     structured: {
       verdict: verdict.verdict,

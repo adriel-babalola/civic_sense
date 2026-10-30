@@ -87,7 +87,8 @@ Stated plainly, because the alternative is a demo that falls over when a judge a
 - **Backend:** Node.js + Express 4
 - **Frontend:** React 19 + Vite + Tailwind 4 + React Router 7
 - **Database:** MongoDB Atlas — FactCheck, Article, Report
-- **AI:** Gemini 2.5 Flash via OpenRouter
+- **AI:** Gemini 2.5 Flash via OpenRouter (verdicts + image claim extraction)
+- **Intent router:** Groq `llama-3.1-8b-instant` primary, OpenRouter `gemini-2.0-flash-lite` fallback, heuristic fail-open — classifies messages and distils search queries before dispatch
 - **Search:** Tavily across 16 Nigerian domains, plus an RSS index of 17 feeds
 - **WhatsApp:** Twilio sandbox. **Telegram:** Bot API
 - **Deployment:** Vercel or Netlify (web), Railway (bot)
@@ -114,7 +115,7 @@ Pick one or two primaries rather than tracking all of them:
 
 ## Key files and links
 
-- **Live website:** https://civic-sense-website.vercel.app/
+- **Live website:** https://civicsense.fyi/
 - **GitHub:** https://github.com/adriel-babalola/civic_sense
 - **Demo video:** https://youtu.be/nhasRYxrBNc
 - **API reference:** [`API.md`](./API.md)

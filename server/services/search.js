@@ -23,7 +23,9 @@ const DOMAINS = [
 
 export async function searchClaim(claim, extraQuery = "") {
   try {
-    const query = extraQuery || `${claim} Nigeria`;
+    let query = String(extraQuery || claim || "").trim();
+    if (!query) query = String(claim || "").trim();
+    if (query && !/nigeria/i.test(query)) query = `${query} Nigeria`;
     const response = await axios.post(
       TAVILY_URL,
       {
