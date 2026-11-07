@@ -126,7 +126,13 @@ router.get("/reports", requireAdmin, async (req, res) => {
       type: type || "",
       state: state || "",
     });
-    res.json({ success: true, ...result });
+    res.json({
+      success: true,
+      reports: result.items || [],
+      total: result.total || 0,
+      page: result.page || 1,
+      totalPages: result.totalPages || 1,
+    });
   } catch (err) {
     console.error(`[Admin Reports] Query error: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
@@ -172,7 +178,13 @@ router.get("/claims", requireAdmin, async (req, res) => {
       verdict: verdict || "",
       channel: channel || "",
     });
-    res.json({ success: true, ...result });
+    res.json({
+      success: true,
+      claims: result.items || [],
+      total: result.total || 0,
+      page: result.page || 1,
+      totalPages: result.totalPages || 1,
+    });
   } catch (err) {
     console.error(`[Admin Claims] Query error: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
@@ -191,7 +203,13 @@ router.get("/suggestions", requireAdmin, async (req, res) => {
       page: Number(page) || 1,
       limit: Number(limit) || 20,
     });
-    res.json({ success: true, ...result });
+    res.json({
+      success: true,
+      suggestions: result.items || [],
+      total: result.total || 0,
+      page: result.page || 1,
+      totalPages: result.totalPages || 1,
+    });
   } catch (err) {
     console.error(`[Admin Suggestions] Query error: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });

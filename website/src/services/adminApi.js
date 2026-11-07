@@ -253,3 +253,18 @@ export async function syncScraperNow() {
     method: "POST",
   });
 }
+
+
+export async function fetchAdminFeedback({ page = 1, limit = 20, status = "" } = {}) {
+  try {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit), ...(status ? { status } : {}) });
+    return await adminFetch(`/api/admin/feedback?${params}`);
+  } catch (err) {
+    console.warn("[Admin API] Failed to fetch feedback:", err);
+    return { data: [], total: 0, page: 1, pages: 1 };
+  }
+}
+
+export async function updateAdminFeedbackStatus(id, status) {
+  return await adminFetch(`/api/admin/feedback/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
