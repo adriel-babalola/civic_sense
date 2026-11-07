@@ -109,7 +109,7 @@ unreachable by typing its URL rather than merely unlisted.
 router's primary classifier — without it the router falls back to OpenRouter,
 then to heuristics), `TAVILY_API_KEY` (live
 search), `MONGODB_URI` (article index and moderation queue),
-`TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (WhatsApp), and
+`META_WHATSAPP_TOKEN` / Meta WhatsApp credentials (WhatsApp), and
 `TELEGRAM_BOT_TOKEN`. The pipeline degrades honestly without them: with no model
 key, `/api/factcheck` returns an error rather than inventing a verdict, and
 with no database the moderation queue reads as empty rather than pretending to

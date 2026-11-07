@@ -8,6 +8,11 @@ export const CONFIG = {
   WHATSAPP_MESSAGE: "Hi CivicSense",
   WHATSAPP: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   API_BASE_URL: (env.VITE_API_URL || "https://civic-sense-8d2m.onrender.com").replace(/\/+$/, ""),
+  CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "hello@civicsense.ng",
+  GITHUB_URL: env.VITE_GITHUB_URL || "https://github.com/adriel-babalola/civic_sense",
+  WHATSAPP: {
+    joinLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
+  },
   SOCIAL: {
     twitter: env.VITE_TWITTER_URL || "https://twitter.com/civicsenseng",
     instagram: env.VITE_INSTAGRAM_URL || "https://instagram.com/civicsenseng",
@@ -15,3 +20,12 @@ export const CONFIG = {
 };
 
 export default CONFIG;
+
+
+export const FEATURES = {
+  webFactCheck: (import.meta.env.VITE_FEATURE_FACTCHECK ?? "true") !== "false",
+  politicians: (import.meta.env.VITE_FEATURE_POLITICIANS ?? "true") !== "false",
+  incidentMap: (import.meta.env.VITE_FEATURE_MAP ?? "true") !== "false",
+  liveFeed: (import.meta.env.VITE_FEATURE_FEED ?? "true") !== "false",
+  reports: (import.meta.env.VITE_FEATURE_REPORTS ?? "true") !== "false",
+};

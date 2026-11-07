@@ -6,6 +6,7 @@ import { FactCheck } from "./pages/public/FactCheck";
 import { Politicians } from "./pages/public/Politicians";
 import { PoliticianDetail } from "./pages/public/PoliticianDetail";
 import { SuggestUpdate } from "./pages/public/SuggestUpdate";
+import { Feedback } from "./pages/public/Feedback";
 import { MapPage } from "./pages/public/MapPage";
 import { Report } from "./pages/public/Report";
 import { LiveFeed } from "./pages/public/LiveFeed";
@@ -45,6 +46,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
 const AdminClaims = lazy(() => import("./pages/admin/AdminClaims"));
 const AdminSuggestions = lazy(() => import("./pages/admin/AdminSuggestions"));
+const AdminFeedback = lazy(() => import("./pages/admin/AdminFeedback"));
 
 export const router = createBrowserRouter([
   {
@@ -95,6 +97,14 @@ export const router = createBrowserRouter([
           </Suspense>
         ),
       },
+      {
+        path: "feedback",
+        element: (
+          <Suspense fallback={<div className="min-h-64 rounded-xl border border-white/[0.08] bg-[#121212] p-8" />}>
+            <AdminFeedback />
+          </Suspense>
+        ),
+      },
     ],
   },
   {
@@ -113,6 +123,7 @@ export const router = createBrowserRouter([
       { path: "/live", element: gated("liveFeed", <LiveFeed />) },
       { path: "/sources", element: <Sources /> },
       { path: "/about", element: <About /> },
+      { path: "/feedback", element: <Feedback /> },
       { path: "/faq", element: <FAQ /> },
       { path: "/privacy", element: <Privacy /> },
       { path: "/data-deletion", element: <DataDeletion /> },
