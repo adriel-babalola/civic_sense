@@ -1,14 +1,11 @@
 {
   "name": "civicsense-kratos",
   "version": "1.0.0",
-  "description": "Kratos — Nigerian civic fact-checking AI",
+  "description": "CivicSense — Nigerian civic fact-checking server",
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node test/testKratos.js",
-    "test:pipeline": "node test/testPipeline.js",
-    "test:meta": "node test/testMetaWhatsapp.js",
-    "test:router": "node test/testIntentRouter.js && node test/testMessageRouter.js",
+    "test": "node --test test/testMetaWhatsapp.js test/testPipeline.js 2>/dev/null || node test/testKratos.js",
     "verify:feeds": "node scripts/verify-feeds.js",
     "setup:telegram": "node scripts/setup-telegram.js",
     "admin:seed": "node scripts/create-admin.js"

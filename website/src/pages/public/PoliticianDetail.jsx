@@ -24,6 +24,7 @@ import {
   ELECTION_DATE_LABEL,
   PRESIDENTIAL,
 } from "../../data/politicians";
+import { getPublicRecords, getHighlights } from "../../data/publicRecords";
 import { Container } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Badge, PartyBadge } from "../../components/shared/Badge";
@@ -262,6 +263,20 @@ export function PoliticianDetail() {
             <p className="mt-2.5 max-w-2xl text-[0.9375rem] leading-relaxed text-fg-secondary">
               {person.bio}
             </p>
+            {getHighlights(person.name).length > 0 ? (
+              <div className="mt-4 rounded-xl border border-line bg-surface-2/50 p-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-fg-faint">Highlighted public records</p>
+                <ul className="mt-3 space-y-2">
+                  {getHighlights(person.name).map((item, i) => (
+                    <li key={i} className="text-sm text-fg-secondary">
+                      <span className="font-medium text-fg">{item.title}</span>
+                      {item.date ? <span className="text-fg-faint"> · {item.date}</span> : null}
+                      <p className="mt-0.5 text-fg-muted">{item.summary}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </section>
 
           {/* Only sections with sourced content, in a fixed order. */}
@@ -282,7 +297,28 @@ export function PoliticianDetail() {
               <Scale size={15} className="text-fg-faint" aria-hidden="true" />
               Public record
             </h2>
-            {hasRecord ? (
+            {getPublicRecords(person.name).length > 0 ? (
+              <ul className="space-y-3">
+                {getPublicRecords(person.name).map((entry, index) => (
+                  <li key={index} className="cs-card p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <p className="text-sm font-semibold text-fg">{entry.title}</p>
+                      {entry.date ? <span className="text-2xs text-fg-faint">{entry.date}</span> : null}
+                    </div>
+                    <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">{entry.summary}</p>
+                    {entry.sources?.length ? (
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
+                        {entry.sources.map((src, si) => (
+                          <a key={si} href={src.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-brand-bright hover:underline">
+                            <ExternalLink size={11} aria-hidden="true" />{src.label}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : hasRecord ? (
               <ul className="space-y-2">
                 {person.record.map((entry, index) => (
                   <li key={index} className="cs-card p-3">
@@ -292,7 +328,7 @@ export function PoliticianDetail() {
               </ul>
             ) : (
               <Alert tone="info" title="Nothing verified yet">
-                We have not published any record entries for {person.name}. That is not a
+                We have not published any sourced public-record entries for {person.name}. That is not a
                 statement that the record is clean. It means our research is incomplete. Entries
                 appear here only when they can be tied to a primary source and a date.
               </Alert>
