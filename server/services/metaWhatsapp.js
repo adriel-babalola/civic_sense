@@ -59,21 +59,41 @@ export async function sendTextMessage(to, body) {
   const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
   if (!token) throw new Error("META_WHATSAPP_TOKEN is not set");
   if (!phoneNumberId) throw new Error("META_WHATSAPP_PHONE_NUMBER_ID is not set");
-  const response = await axios.post(
-    `${GRAPH_URL}/${phoneNumberId}/messages`,
-    {
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to,
-      type: "text",
-      text: { body, preview_url: false },
-    },
-    {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      timeout: META_TIMEOUT_MS,
+
+  // Log outgoing message for debugging
+  console.log(`[Meta] Sending to=${to} body="${body ? body.substring(0, 100) : "EMPTY"}${body && body.length > 100 ? "..." : ""}"`);
+
+  try {
+    const response = await axios.post(
+      `${GRAPH_URL}/${phoneNumberId}/messages`,
+      {
+        messaging_product: "whatsapp",
+        recipient_type: "individual",
+        to,
+        type: "text",
+        text: { body, preview_url: false },
+      },
+      {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        timeout: META_TIMEOUT_MS,
+      }
+    );
+    console.log(`[Meta] Send OK to=${to}`);
+    return response.data;
+  } catch (err) {
+    // Capture Meta's full error response for debugging
+    const metaError = err.response?.data || {};
+    const status = err.response?.status || "no-response";
+    console.error(`[Meta] Send FAILED status=${status} to=${to}`);
+    console.error(`[Meta] Error details:`, JSON.stringify(metaError, null, 2));
+    if (err.response?.data?.error) {
+      console.error(`[Meta] Error message: ${err.response.data.error.message || "unknown"}`);
+      console.error(`[Meta] Error code: ${err.response.data.error.code || "unknown"}`);
+      console.error(`[Meta] Error type: ${err.response.data.error.type || "unknown"}`);
     }
-  );
-  return response.data;
+    // Re-throw so caller can handle it
+    throw err;
+  }
 }
 
 export async function downloadMedia(mediaId) {

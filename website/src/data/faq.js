@@ -5,7 +5,7 @@ export const FAQS = [
     id: "what",
     question: "What is CivicSense actually for?",
     answer:
-      "Truth awareness. We are a youth and mass sensitisation platform: the work is helping young Nigerians and the wider public check what reaches them before they believe it, and reach decisions they can stand behind. Checking individual claims is how that is done, not the whole point of it. We are not in the business of telling anyone what to think, only of making sure the evidence is in their hands.",
+      "Truth, awareness, and civic sensibility. We help Nigerians check civic and political claims with evidence so they can make informed decisions. Checking claims is how we do that work; we do not tell people what to think.",
   },
   {
     id: "whatsapp",

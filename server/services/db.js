@@ -5,6 +5,9 @@ const factCheckSchema = new mongoose.Schema(
     claim: { type: String },
     verdict: String,
     channel: { type: String, default: "test" },
+    intent: String,
+    searchQuery: String,
+    routerSource: String,
     timestamp: { type: Date, default: Date.now },
     hashedFrom: String,
   },
@@ -138,6 +141,18 @@ profileSuggestionSchema.index({ status: 1, createdAt: -1 });
 
 const ProfileSuggestion = mongoose.model("ProfileSuggestion", profileSuggestionSchema);
 
+
+const feedbackSchema = new mongoose.Schema({
+  message: { type: String, required: true, trim: true },
+  email: { type: String, trim: true, default: "" },
+  rating: { type: Number, min: 1, max: 5, default: null },
+  page: { type: String, trim: true, default: "" },
+  status: { type: String, enum: ["new","reviewed","archived"], default: "new" },
+  timestamp: { type: Date, default: Date.now },
+}, { autoIndex: true });
+feedbackSchema.index({ timestamp: -1 });
+const Feedback = mongoose.model("Feedback", feedbackSchema);
+
 export async function connectDB() {
   if (mongoose.connection.readyState === 0) {
     if (!process.env.MONGODB_URI) {
@@ -233,6 +248,20 @@ export async function searchArticles(claim, limit = 8) {
       .lean();
   } catch (err) {
     console.error(`DB article search error: ${err.message}`);
+    return [];
+  }
+}
+
+export async function getLatestArticles(limit = 6) {
+  try {
+    await connectDB();
+    if (!isDbConnected()) return [];
+    return await Article.find()
+      .sort({ pubDate: -1, createdAt: -1 })
+      .limit(limit)
+      .lean();
+  } catch (err) {
+    console.error(`DB latest articles error: ${err.message}`);
     return [];
   }
 }
@@ -431,6 +460,7 @@ export async function getAdminStats(scraperStats = null) {
         channels: { whatsapp: 0, telegram: 0, meta_whatsapp: 0, web: 0, test: 0 },
         reports: { pending: 0, approved: 0, rejected: 0, total: 0 },
         suggestions: { pending: 0, approved: 0, rejected: 0, total: 0 },
+        feedback: { new: 0, reviewed: 0, archived: 0, total: 0 },
         articlesCount: 0,
         scraper: scraperStats,
       };
@@ -468,6 +498,9 @@ export async function getAdminStats(scraperStats = null) {
       ProfileSuggestion.aggregate([
         { $group: { _id: "$status", count: { $sum: 1 } } },
       ]),
+      Feedback.aggregate([
+        { $group: { _id: "$status", count: { $sum: 1 } } },
+      ]),
       Article.estimatedDocumentCount(),
     ]);
 
@@ -490,11 +523,12 @@ export async function getAdminStats(scraperStats = null) {
     }
 
     const suggestions = { pending: 0, approved: 0, rejected: 0, total: 0 };
-    for (const s of suggestionAgg) {
-      if (s._id) {
-        suggestions[s._id] = s.count;
-        suggestions.total += s.count;
-      }
+    for (const sg of suggestionAgg) {
+      if (sg._id) { suggestions[sg._id] = sg.count; suggestions.total += sg.count; }
+    }
+    const feedback = { new: 0, reviewed: 0, archived: 0, total: 0 };
+    for (const f of (feedbackAgg || [])) {
+      if (f._id) { feedback[f._id] = f.count; feedback.total += f.count; }
     }
 
     return {
@@ -507,6 +541,7 @@ export async function getAdminStats(scraperStats = null) {
       channels,
       reports,
       suggestions,
+      feedback,
       articlesCount,
       scraper: scraperStats,
     };
@@ -518,3 +553,27 @@ export async function getAdminStats(scraperStats = null) {
 
 export { Article, Report, FactCheck, AdminUser, ProfileSuggestion };
 
+
+
+export async function saveFeedback({ message, email, rating, page }) {
+  if (!isDbConnected()) return null;
+  return Feedback.create({ message, email: email || "", rating: rating || null, page: page || "" });
+}
+
+export async function getFeedbackPaginated({ page = 1, limit = 20, status = "" } = {}) {
+  if (!isDbConnected()) return { data: [], total: 0, page, pages: 0 };
+  const query = {};
+  if (status) query.status = status;
+  const skip = (page - 1) * limit;
+  const [data, total] = await Promise.all([
+    Feedback.find(query).sort({ timestamp: -1 }).skip(skip).limit(limit).lean(),
+    Feedback.countDocuments(query),
+  ]);
+  return { data, total, page, pages: Math.ceil(total / limit) };
+}
+
+export async function updateFeedbackStatus(id, status) {
+  if (!isDbConnected()) return null;
+  if (!mongoose.Types.ObjectId.isValid(id)) return null;
+  return Feedback.findByIdAndUpdate(id, { status }, { new: true }).lean();
+}

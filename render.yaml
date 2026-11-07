@@ -43,11 +43,15 @@ services:
       - key: SCRAPE_SECRET
         generateValue: true
       - key: LLM_MODEL
-        value: google/gemma-4-31b-it
+        value: deepseek/deepseek-chat-v3-0324
+      - key: ROUTER_MODEL
+        value: deepseek/deepseek-chat-v3-0324
       - key: LLM_TIMEOUT_MS
-        value: "12000"
+        value: "9000"
       - key: PIPELINE_DEADLINE_MS
-        value: "14000"
+        value: "12000"
+      - key: ROUTER_TIMEOUT_MS
+        value: "3500"
       - key: SCRAPE_INTERVAL_MIN
         value: "30"
       - key: ARTICLE_TTL_DAYS

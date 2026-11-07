@@ -37,6 +37,7 @@ import {
   isDbConnected,
   countArticles,
   saveProfileSuggestion,
+  saveFeedback,
 } from "./services/db.js";
 import { startScraper, getScraperStats, syncOnce } from "./services/scraper.js";
 import { validateImageBuffer, bufferToDataUrl, imageFromUrl } from "./services/image.js";
@@ -71,8 +72,6 @@ app.use(express.json({
 
 // Track users who have sent their first message
 const firstMessageUsers = new Set();
-
-// Track users who have responded to the dropdown prompt
 const promptStates = new Map();
 
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
@@ -232,31 +231,21 @@ app.post("/webhook/meta", async (req, res) => {
   const message = extractMetaMessage(req.body);
   if (!message) return res.send("ok");
 
-  console.log(
-    `[Meta] Incoming from ${message.from}: "${message.text || ""}" image=${message.imageId ? "yes" : "no"}`
-  );
+  console.log(`[Meta] Incoming from ${message.from}: "${message.text || ""}" image=${message.imageId ? "yes" : "no"}`);
   res.send("ok");
 
   const isFirst = !firstMessageUsers.has(message.from);
   firstMessageUsers.add(message.from);
-  const route = routeMessage(message.text, { hasImage: Boolean(message.imageId), isFirstMessage: isFirst, userId: message.from });
+  const context = promptStates.get(message.from) || {};
+  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), context });
   if (route.intent !== "fact-check") {
-    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-    let combinedReply = route.reply;
-    // Add prompt if user is in pending prompt state
-    const promptState = promptStates.get(message.from);
-    if (promptState === "awaiting_yes_no") {
-      combinedReply = `${route.reply}\n\nDo you want to go back to dropdown? Type yes or no`;
-    } else if (promptState === "awaiting_dropdown") {
-      // User already said yes, dropdown was shown, reset state
-      promptStates.delete(message.from);
-    }
-    // If user just said yes/no, the routeMessage already handled it
-    // Send the reply
-    return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
-      console.error("Casual Meta reply error:", err.message);
+    promptStates.set(message.from, { lastIntent: route.intent || route.router?.intent || "off_topic" });
+    const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+    return sendMetaTextMessage(message.from, reply).catch((err) => {
+      console.error("Meta reply error:", err.message);
     });
   }
+  promptStates.set(message.from, { lastIntent: "fact_checking" });
 
   setImmediate(async () => {
     try {
@@ -269,6 +258,7 @@ app.post("/webhook/meta", async (req, res) => {
         claim: message.text,
         imageDataUrl,
         caption: message.caption || message.text,
+        searchQuery: route.searchQuery,
       });
       await saveFactCheck({
         claim: result.claim || message.text,
@@ -278,15 +268,11 @@ app.post("/webhook/meta", async (req, res) => {
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
       await sendMetaTextMessage(message.from, result.verdict);
-      promptStates.set(normalizePhoneNumber(message.from), "awaiting_numbers");
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
       console.error("Meta webhook async error:", err);
       try {
-        await sendMetaTextMessage(
-          message.from,
-          "Sorry, I couldn't process that. Please try again with a text claim."
-        );
+        await sendMetaTextMessage(message.from, "I couldn't verify that right now. Please send the claim again with key details.");
       } catch (sendErr) {
         console.error("Failed to send error reply:", sendErr.message);
       }
@@ -298,21 +284,16 @@ app.post("/webhook/telegram", async (req, res) => {
   if (!verifyTelegramSecret(req.get("X-Telegram-Bot-Api-Secret-Token"))) {
     return res.status(401).send("Unauthorized");
   }
-
   const update = req.body;
   const message = extractMessage(update);
-  if (!message || !message.chatId) {
-    return res.send("ok");
-  }
-
-  console.log(`Telegram from ${message.chatId}: "${message.text}" fileId=${message.fileId || "none"}`);
-
+  if (!message || !message.chatId) return res.send("ok");
+  console.log(`Telegram from ${message.chatId}: "${message.text || ""}" fileId=${message.fileId || "none"}`);
   res.send("ok");
   if (!message.text && !message.fileId) return;
 
   try {
-    const isFirst = !firstMessageUsers.has(message.chatId);
-    firstMessageUsers.add(message.chatId);
+    const isFirst = !firstMessageUsers.has(String(message.chatId));
+    firstMessageUsers.add(String(message.chatId));
     sendChatAction(message.chatId, "typing");
 
     let imageDataUrl = null;
@@ -322,8 +303,16 @@ app.post("/webhook/telegram", async (req, res) => {
       if (remote) imageDataUrl = remote.dataUrl;
     }
 
-    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text });
+    const context = promptStates.get(String(message.chatId)) || {};
+    const route = await routeMessage(message.text, { hasImage: Boolean(imageDataUrl), context });
+    if (route.intent !== "fact-check") {
+      promptStates.set(String(message.chatId), { lastIntent: route.intent || route.router?.intent || "off_topic" });
+      const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+      return sendMessage(message.chatId, reply);
+    }
+    promptStates.set(String(message.chatId), { lastIntent: "fact_checking" });
 
+    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
     await saveFactCheck({
       claim: result.claim || message.text,
       verdict: result.verdict,
@@ -332,22 +321,10 @@ app.post("/webhook/telegram", async (req, res) => {
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
 
-    let combinedReply = result.verdict;
-    // Add prompt if user is in pending prompt state
-    const promptState = promptStates.get(message.chatId);
-    if (promptState === "awaiting_yes_no") {
-      combinedReply = `${result.verdict}\n\nDo you want to go back to dropdown? Type yes or no`;
-    } else if (promptState === "awaiting_dropdown") {
-      // User already said yes, dropdown was shown, reset state
-      promptStates.delete(message.chatId);
-    }
-
-    await sendMessage(message.chatId, combinedReply);
-      promptStates.set(normalizePhoneNumber(message.chatId.toString()), "awaiting_numbers");
+    await sendMessage(message.chatId, result.verdict);
   } catch (err) {
     console.error("Telegram webhook error:", err);
-    const welcomeMsg = isFirst ? "Welcome to CivicSense! I'm ready to help you fact-check political claims." : "";
-    await sendMessage(message.chatId, `Sorry, I couldn't process that. Please try again with a text claim.${welcomeMsg ? `\n\n${welcomeMsg}` : ""}`);
+    try { await sendMessage(message.chatId, "I couldn't verify that right now. Please send the claim again."); } catch (_) {}
   }
 });
 
@@ -391,6 +368,30 @@ app.get("/api/reports", async (req, res) => {
 app.use("/api/admin", adminRouter);
 
 // Public profile adjustment suggestion submission
+
+
+app.post("/api/feedback", async (req, res) => {
+  const { message, email, rating, page } = req.body || {};
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ success: false, error: "Feedback message is required" });
+  }
+  if (email && !/^\S+@\S+\.\S+$/.test(String(email))) {
+    return res.status(400).json({ success: false, error: "Email must be valid when provided" });
+  }
+  try {
+    const data = await saveFeedback({
+      message: String(message).trim().slice(0, 2000),
+      email: email ? String(email).trim().slice(0, 254) : "",
+      rating: rating ? Math.min(5, Math.max(1, Number(rating))) : null,
+      page: page ? String(page).slice(0, 200) : "",
+    });
+    if (!data) return res.status(503).json({ success: false, error: "Feedback storage unavailable" });
+    res.status(201).json({ success: true, data: { id: data._id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.post("/api/suggestions", async (req, res) => {
   const { politicianSlug, politicianName, field, suggestedText, sourceUrl } = req.body || {};
   if (!politicianSlug || !politicianName || !suggestedText || !sourceUrl) {

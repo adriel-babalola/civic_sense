@@ -9,6 +9,8 @@ import {
   getFactChecksPaginated,
   getProfileSuggestions,
   updateProfileSuggestionStatus,
+  getFeedbackPaginated,
+  updateFeedbackStatus,
 } from "../services/db.js";
 import {
   signAdminToken,
@@ -240,3 +242,28 @@ router.post("/scraper/sync", requireSuperadmin, async (req, res) => {
 });
 
 export default router;
+
+
+router.get("/feedback", requireAdmin, async (req, res) => {
+  try {
+    const { page, limit, status } = req.query;
+    const result = await getFeedbackPaginated({ page: Number(page) || 1, limit: Number(limit) || 20, status: status || "" });
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+router.patch("/feedback/:id", requireAdmin, async (req, res) => {
+  const { status } = req.body || {};
+  if (!["new","reviewed","archived"].includes(status)) {
+    return res.status(400).json({ success: false, error: "Invalid status" });
+  }
+  try {
+    const item = await updateFeedbackStatus(req.params.id, status);
+    if (!item) return res.status(404).json({ success: false, error: "Feedback not found" });
+    res.json({ success: true, data: item });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});

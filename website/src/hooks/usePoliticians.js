@@ -98,6 +98,7 @@ export function usePoliticians() {
     const tokens = needle ? needle.split("-").filter(Boolean) : [];
 
     return UNIQUE_POLITICIANS.filter((person) => {
+      if (!person) return false;
       if (party !== ALL && person.party !== party) return false;
       if (role !== ALL && person.role !== role) return false;
       if (tokens.length === 0) return true;
@@ -106,13 +107,13 @@ export function usePoliticians() {
       // narrows rather than widens.
       const haystack = slugify(
         [
-          person.name,
-          person.office,
-          person.party,
-          person.partyName,
-          person.bio,
-          person.runningMate.name,
-        ].join(" "),
+          person?.name,
+          person?.office,
+          person?.party,
+          person?.partyName,
+          person?.bio,
+          person?.runningMate?.name,
+        ].filter(Boolean).join(" "),
       );
       return tokens.every((token) => haystack.includes(token));
     }).sort(SORTS[sort]?.compare ?? SORTS.role.compare);

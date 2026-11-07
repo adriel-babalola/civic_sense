@@ -105,7 +105,9 @@ unreachable by typing its URL rather than merely unlisted.
 ### Server
 
 `server/.env.example` lists every key. The ones without a working default:
-`OPENROUTER_API_KEY` (the model behind the verdict), `TAVILY_API_KEY` (live
+`OPENROUTER_API_KEY` (the model behind the verdict), `GROQ_API_KEY` (the intent
+router's primary classifier — without it the router falls back to OpenRouter,
+then to heuristics), `TAVILY_API_KEY` (live
 search), `MONGODB_URI` (article index and moderation queue),
 `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` (WhatsApp), and
 `TELEGRAM_BOT_TOKEN`. The pipeline degrades honestly without them: with no model
