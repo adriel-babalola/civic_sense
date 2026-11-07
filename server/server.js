@@ -6,26 +6,6 @@ import rateLimit from "express-rate-limit";
 import multer from "multer";
 dotenv.config();
 
-// Universal phone number normalizer for consistent promptStates keys
-// Accepts: +8801700000000, 8801700000000, 2347063373229
-// Returns: +8801700000000 (E.164 format with + prefix)
-function normalizePhoneNumber(num) {
-  if (!num) return num;
-  // Remove all non-digit characters except leading +
-  let cleaned = num.replace(/[^\d+]/g, '');
-  // Ensure it starts with + for E.164 compatibility
-  if (!cleaned.startsWith('+') && cleaned.length > 8) {
-    // Keep as-is if already valid format, otherwise prepend +
-    // This ensures consistent keys in promptStates Map
-    if (cleaned.startsWith('0') && cleaned.length > 9) {
-      // Local format - keep as-is or could map to country code
-      return '+' + cleaned;
-    }
-    return '+' + cleaned;
-  }
-  return cleaned;
-}
-
 import { runFactCheck } from "./services/pipeline.js";
 import {
   connectDB,

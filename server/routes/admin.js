@@ -126,12 +126,14 @@ router.get("/reports", requireAdmin, async (req, res) => {
       type: type || "",
       state: state || "",
     });
+    const base = await (await import("../services/db.js")).getAdminStats(null).catch(()=>null);
     res.json({
       success: true,
       reports: result.items || [],
       total: result.total || 0,
       page: result.page || 1,
       totalPages: result.totalPages || 1,
+      counts: base?.reports || { pending: 0, approved: 0, rejected: 0, total: result.total || 0 },
     });
   } catch (err) {
     console.error(`[Admin Reports] Query error: ${err.message}`);
