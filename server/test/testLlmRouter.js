@@ -33,10 +33,14 @@ async function testFallback() {
   const civic = fallback("Is the naira stronger than the dollar right now?");
   assert.equal(civic.intent, "fact_checking");
 
-  // Casual query
+  // Casual query (Guardrail 1)
   const casual = fallback("What is your favorite color?");
-  assert.equal(casual.intent, "off_topic");
-  assert.equal(casual.reply, OFFTOPIC_REJECTION);
+  assert.equal(casual.intent, "casual");
+  assert.ok(casual.reply && casual.reply.length > 5);
+
+  const greeting = fallback("Hello");
+  assert.equal(greeting.intent, "casual");
+  assert.ok(greeting.reply && greeting.reply.length > 5);
 }
 
 async function testRouteMessageIntegration() {

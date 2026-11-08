@@ -220,7 +220,10 @@ app.post("/webhook/meta", async (req, res) => {
   const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), context });
   if (route.intent !== "fact-check") {
     promptStates.set(message.from, { lastIntent: route.intent || route.router?.intent || "off_topic" });
-    const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+    let reply = route.reply;
+    if (route.intent !== "off_topic" && isFirst && !/^(welcome|hello|hi|hey)/i.test(reply)) {
+      reply = `Welcome to CivicSense. ${reply}`;
+    }
     return sendMetaTextMessage(message.from, reply).catch((err) => {
       console.error("Meta reply error:", err.message);
     });
@@ -287,7 +290,10 @@ app.post("/webhook/telegram", async (req, res) => {
     const route = await routeMessage(message.text, { hasImage: Boolean(imageDataUrl), context });
     if (route.intent !== "fact-check") {
       promptStates.set(String(message.chatId), { lastIntent: route.intent || route.router?.intent || "off_topic" });
-      const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+      let reply = route.reply;
+    if (route.intent !== "off_topic" && isFirst && !/^(welcome|hello|hi|hey)/i.test(reply)) {
+      reply = `Welcome to CivicSense. ${reply}`;
+    }
       return sendMessage(message.chatId, reply);
     }
     promptStates.set(String(message.chatId), { lastIntent: "fact_checking" });
