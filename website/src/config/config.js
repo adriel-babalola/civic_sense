@@ -6,12 +6,13 @@ export const CONFIG = {
   ABOUT_TAGLINE: "Truth, Awareness, and Civic Sensibility",
   WHATSAPP_NUMBER: env.VITE_WHATSAPP_NUMBER || "",
   WHATSAPP_MESSAGE: "Hi CivicSense",
-  WHATSAPP: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
+  WHATSAPP_LINK: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   API_BASE_URL: (env.VITE_API_URL || "https://civic-sense-8d2m.onrender.com").replace(/\/+$/, ""),
   CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "hello@civicsense.ng",
   GITHUB_URL: env.VITE_GITHUB_URL || "https://github.com/adriel-babalola/civic_sense",
   WHATSAPP: {
     joinLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
+    chatLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   },
   SOCIAL: {
     twitter: env.VITE_TWITTER_URL || "https://twitter.com/civicsenseng",
