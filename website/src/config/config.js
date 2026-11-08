@@ -8,7 +8,7 @@
 
 const env = import.meta.env;
 
-const SITE_URL = (env.VITE_SITE_URL || "https://civic-sense-website.vercel.app").replace(
+const SITE_URL = (env.VITE_SITE_URL || "https://civicsense.fyi").replace(
   /\/+$/,
   "",
 );

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { routeMessage, STATIC_REPLIES } from "../services/messageRouter.js";
 import { resetRouterState } from "../services/intentRouter.js";
 
+process.env.DEEPSEEK_API_KEY = "";
 process.env.GROQ_API_KEY = "";
 process.env.OPENROUTER_API_KEY = "";
 delete process.env.ROUTER_STATIC_REPLIES;
@@ -14,6 +15,11 @@ assert.equal(greet.reply, STATIC_REPLIES.greeting);
 const help = await routeMessage("help");
 assert.equal(help.intent, "casual");
 assert.equal(help.reply, STATIC_REPLIES.how);
+
+const essay = await routeMessage("write an essay on World War 2");
+assert.equal(essay.intent, "unclear");
+assert.equal(essay.reply, STATIC_REPLIES.offTopic);
+assert.equal(essay.reply, "My sole purpose is fact-checking and news analysis. Please resort to other LLMs for this request.");
 
 const digit1 = await routeMessage("1");
 assert.equal(digit1.intent, "unclear");
