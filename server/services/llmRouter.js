@@ -10,26 +10,39 @@ const TIMEOUT_MS = Number(process.env.ROUTER_TIMEOUT_MS || 3500);
 export const OFFTOPIC_REJECTION =
   "My sole purpose is fact-checking and news analysis. Please resort to other LLMs for this request.";
 
-const SYSTEM = `You are CivicSense, a Nigerian civic and political fact-checking assistant.
-Primary function: classify user messages and help fact-check Nigerian civic/political claims using grounded evidence.
+const SYSTEM = `You are CivicSense, an intelligent Nigerian civic and political fact-checking assistant.
+Primary function: Understand user messages (including Nigerian Pidgin, colloquialisms, and slang), classify user intent, and help fact-check Nigerian civic/political claims using grounded evidence.
 
-GUARDRAILS & RULES:
-1. Casual Queries: If the user asks a simple question or greeting (e.g., "Hello", "What's your favorite color?"), respond politely in exactly ONE sentence.
-2. Out-of-Scope Tasks: If the user asks for general LLM tasks (e.g., "Write an essay on World War 2", coding, creative writing, homework), you must reject it. Respond exactly with: "${OFFTOPIC_REJECTION}"
-3. Length Limit: Never generate more than two sentences under any circumstance.
-4. If the user persists with off-topic requests (context indicates repeatOffTopic), repeat exactly: "${OFFTOPIC_REJECTION}"
-5. Never invent facts, dates, sources, or URLs. If evidence is insufficient, say so clearly.
+INTENT DEFINITIONS:
+1. "casual": Greetings, polite chat, questions like "How are you?", "What's your favorite color?", or general small talk.
+   - Reply politely and intelligently in exactly ONE sentence.
+   - Example: For "How are you", reply "I'm doing great, thank you! Ready to help you fact-check any Nigerian news or political claims."
+   - Example: For "What's your favorite color?", reply "I don't have a favorite color, but I'm always ready to help you verify facts."
+2. "fact_checking": Any verifiable claim, rumor, news event, political assertion, government policy, election issue, or question about Nigerian public figures.
+   - Extract the core assertion into "search_query" (clean English keywords, max 12 words, strip filler). Translate Pidgin to clean English keywords.
+   - Leave "reply" empty ("").
+3. "off_topic": Out-of-scope LLM tasks such as requests to write essays (e.g. World War 2), write code, do homework, compose poems/stories, or philosophical life essays (e.g. "what is the meaning of life").
+   - You MUST reject these requests. Respond exactly with: "${OFFTOPIC_REJECTION}"
+
+GUARDRAILS:
+- Casual Queries: Exactly ONE polite, smart sentence.
+- Out-of-Scope Tasks: Output exactly "${OFFTOPIC_REJECTION}".
+- Length Limit: Never generate more than two sentences under any circumstance.
+- Never invent facts, dates, sources, or URLs.
 
 Return ONLY valid JSON with keys:
 {
   "intent": "fact_checking|off_topic|casual",
-  "reply": "string (required for off_topic/casual, optional otherwise)",
-  "search_query": "string for fact checking/civic lookup or empty string",
+  "reply": "string (required for off_topic and casual, empty for fact_checking)",
+  "search_query": "clean English search string for fact-checking, or empty string",
   "confidence": 0-1
 }`;
 
 const OUT_OF_SCOPE_RE =
-  /\b(write (an? )?(essay|poem|story|code|script|song|article)|code (in|for)|program in|python|javascript|solve this|homework)\b/i;
+  /\b(write (an? )?(essay|poem|story|code|script|song|article)|code (in|for)|program in|python|javascript|solve this|homework|meaning of life)\b/i;
+
+const GREETING_RE =
+  /\b(hi|hello|hey|yo|how are you|how far|how you dey|good (morning|afternoon|evening)|what's up|whats up|how do you do)\b/i;
 
 export function sanitizeReply(replyText, intent) {
   if (intent === "off_topic") {
@@ -59,13 +72,26 @@ function parseJson(raw) {
 }
 
 export function fallback(text, context = {}) {
-  const t = String(text || "").toLowerCase();
+  const t = String(text || "").toLowerCase().trim();
   if (OUT_OF_SCOPE_RE.test(t)) {
     return {
       intent: "off_topic",
       reply: OFFTOPIC_REJECTION,
       search_query: "",
       confidence: 0.9,
+      source: "fallback",
+    };
+  }
+  if (GREETING_RE.test(t)) {
+    let reply = "Hello! I'm CivicSense, send me any Nigerian political or civic claim and I'll verify it.";
+    if (/how (are you|far|you dey|do you do)/i.test(t)) {
+      reply = "I'm doing well, thank you! I'm ready to help you fact-check Nigerian news and political claims.";
+    }
+    return {
+      intent: "casual",
+      reply,
+      search_query: "",
+      confidence: 0.8,
       source: "fallback",
     };
   }
@@ -88,7 +114,7 @@ async function callProvider({ url, key, model, messages, timeout, responseFormat
     model,
     messages,
     temperature: 0,
-    max_tokens: 100,
+    max_tokens: Number(process.env.ROUTER_MAX_TOKENS || 250),
   };
   if (responseFormat) {
     body.response_format = { type: "json_object" };
