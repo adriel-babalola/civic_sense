@@ -1,8 +1,7 @@
 import { searchKnowledgeBase } from "./gemini.js";
-import { routeConversationalMessage } from "./llmRouter.js";
+import { routeConversationalMessage, OFFTOPIC_REJECTION } from "./llmRouter.js";
 
-const OFFTOPIC_REDIRECT =
-  "Please use another chatbot for that request; CivicSense is focused on Nigerian civic and political fact-checking.";
+const OFFTOPIC_REDIRECT = OFFTOPIC_REJECTION;
 
 function normalizeMessage(text) {
   return String(text || "")

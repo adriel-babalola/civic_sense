@@ -2,6 +2,7 @@ const env = import.meta.env;
 
 export const CONFIG = {
   SITE_NAME: "CivicSense",
+  SITE_URL: (env.VITE_SITE_URL || "https://civicsense.fyi").replace(/\/+$/, ""),
   TAGLINE: "Truth. Awareness. Vote Informed.",
   ABOUT_TAGLINE: "Truth, Awareness, and Civic Sensibility",
   WHATSAPP_NUMBER: env.VITE_WHATSAPP_NUMBER || "",
@@ -9,10 +10,14 @@ export const CONFIG = {
   WHATSAPP_LINK: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   API_BASE_URL: (env.VITE_API_URL || "https://civic-sense-8d2m.onrender.com").replace(/\/+$/, ""),
   CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "hello@civicsense.ng",
+  PRIVACY_EMAIL: "civicsense.verify@gmail.com",
   GITHUB_URL: env.VITE_GITHUB_URL || "https://github.com/adriel-babalola/civic_sense",
   MAX_UPLOAD_BYTES: 5 * 1024 * 1024,
+  MAX_UPLOAD_MB: 5,
   ACCEPTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   WHATSAPP: {
+    e164: env.VITE_WHATSAPP_NUMBER || "",
+    display: env.VITE_WHATSAPP_NUMBER || "",
     joinLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
     chatLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   },
@@ -22,9 +27,6 @@ export const CONFIG = {
   },
 };
 
-export default CONFIG;
-
-
 export const FEATURES = {
   webFactCheck: (import.meta.env.VITE_FEATURE_FACTCHECK ?? "true") !== "false",
   politicians: (import.meta.env.VITE_FEATURE_POLITICIANS ?? "true") !== "false",
@@ -32,3 +34,5 @@ export const FEATURES = {
   liveFeed: (import.meta.env.VITE_FEATURE_FEED ?? "true") !== "false",
   reports: (import.meta.env.VITE_FEATURE_REPORTS ?? "true") !== "false",
 };
+
+export default CONFIG;

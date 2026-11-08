@@ -18,7 +18,11 @@ services:
         value: production
       - key: LOG_LEVEL
         value: info
+      - key: DEEPSEEK_API_KEY
+        sync: false
       - key: OPENROUTER_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
         sync: false
       - key: TAVILY_API_KEY
         sync: false
@@ -46,12 +50,18 @@ services:
         value: deepseek/deepseek-chat-v3-0324
       - key: ROUTER_MODEL
         value: deepseek/deepseek-chat-v3-0324
+      - key: ROUTER_MODEL_DEEPSEEK
+        value: deepseek-chat
       - key: LLM_TIMEOUT_MS
         value: "9000"
       - key: PIPELINE_DEADLINE_MS
         value: "12000"
       - key: ROUTER_TIMEOUT_MS
         value: "3500"
+      - key: ROUTER_BUDGET_MS
+        value: "3500"
+      - key: ROUTER_STATIC_REPLIES
+        value: "false"
       - key: SCRAPE_INTERVAL_MIN
         value: "30"
       - key: ARTICLE_TTL_DAYS

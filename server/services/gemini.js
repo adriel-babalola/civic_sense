@@ -7,8 +7,11 @@ import { cache } from "./cache.js";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KB_PATH = path.join(__dirname, "..", "data", "civic_kb.json");
 
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = process.env.LLM_MODEL || "deepseek/deepseek-chat-v3-0324";
+
+const DEEPSEEK_MODEL = process.env.LLM_MODEL_DEEPSEEK || "deepseek-chat";
+const OPENROUTER_MODEL = process.env.LLM_MODEL || "deepseek/deepseek-chat-v3-0324";
 const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 9000;
 
 function normalizeClaim(claim) {
@@ -59,27 +62,76 @@ async function callModel(messages, maxTokens = 500, options = {}) {
     typeof messages === "string"
       ? [{ role: "user", content: messages }]
       : messages;
-  const response = await axios.post(
-    OPENROUTER_URL,
-    {
-      model: MODEL,
-      messages: normalized,
-      temperature: 0,
-      max_tokens: maxTokens,
-      reasoning: { effort: "none", exclude: true },
-      ...options,
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://civicsense.ng",
-        "X-Title": "CivicSense",
-      },
-      timeout: LLM_TIMEOUT_MS,
-    }
+
+  const deepseekKey = process.env.DEEPSEEK_API_KEY;
+  const openrouterKey = process.env.OPENROUTER_API_KEY;
+
+  const hasImage = Array.isArray(normalized) && normalized.some((m) =>
+    Array.isArray(m.content) && m.content.some((c) => c.type === "image_url")
   );
-  return response.data?.choices?.[0]?.message?.content || "";
+
+  const providers = [];
+
+  // DeepSeek primary (if not an image payload)
+  if (deepseekKey && !hasImage) {
+    providers.push({
+      name: "deepseek",
+      url: DEEPSEEK_URL,
+      key: deepseekKey,
+      model: DEEPSEEK_MODEL,
+      payload: {
+        model: DEEPSEEK_MODEL,
+        messages: normalized,
+        temperature: 0,
+        max_tokens: maxTokens,
+      },
+    });
+  }
+
+  // OpenRouter (supports text and vision)
+  if (openrouterKey) {
+    providers.push({
+      name: "openrouter",
+      url: OPENROUTER_URL,
+      key: openrouterKey,
+      model: hasImage ? "google/gemini-2.0-flash-lite" : OPENROUTER_MODEL,
+      payload: {
+        model: hasImage ? "google/gemini-2.0-flash-lite" : OPENROUTER_MODEL,
+        messages: normalized,
+        temperature: 0,
+        max_tokens: maxTokens,
+        reasoning: { effort: "none", exclude: true },
+        ...options,
+      },
+    });
+  }
+
+  let lastError = null;
+  for (const p of providers) {
+    try {
+      const response = await axios.post(
+        p.url,
+        p.payload,
+        {
+          headers: {
+            Authorization: `Bearer ${p.key}`,
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://civicsense.fyi",
+            "X-Title": "CivicSense",
+          },
+          timeout: LLM_TIMEOUT_MS,
+        }
+      );
+      const text = response.data?.choices?.[0]?.message?.content || "";
+      if (text) return text;
+    } catch (err) {
+      console.warn(`[LLM] Provider ${p.name} failed (${err.response?.status || err.message})`);
+      lastError = err;
+    }
+  }
+
+  if (lastError) throw lastError;
+  throw new Error("No LLM API key configured (set DEEPSEEK_API_KEY or OPENROUTER_API_KEY)");
 }
 
 function withTimeout(promise, ms = LLM_TIMEOUT_MS) {
@@ -157,24 +209,44 @@ function buildFormatted(data) {
   );
 }
 
-function fallbackVerdict(claim, ctx) {
-  const kb = (ctx.kbMatches || []).find((e) => e.verdict !== "UNVERIFIED");
-  const data = kb
-    ? {
-        verdict: kb.verdict,
-        confidence: 70,
-        whatWeFound: kb.explanation,
-        source: kb.source,
-        sources: [],
-      }
-    : {
-        verdict: "UNVERIFIED",
-        confidence: 40,
-        whatWeFound:
-          "We could not determine a clear answer based on the available evidence. Please send more details or check back later.",
-        source: "No specific source on file",
-        sources: [],
-      };
+function fallbackVerdict(claim, ctx = {}) {
+  const kb = (ctx.kbMatches || []).find((e) => e.verdict && e.verdict !== "UNVERIFIED");
+  if (kb) {
+    const data = {
+      verdict: kb.verdict,
+      confidence: 70,
+      whatWeFound: kb.explanation,
+      source: kb.source,
+      sources: [],
+    };
+    data.formatted = buildFormatted(data);
+    return data;
+  }
+  const articles = ctx.articles || [];
+  if (articles.length > 0) {
+    const top = articles[0];
+    const data = {
+      verdict: "UNVERIFIED",
+      confidence: 50,
+      whatWeFound: `We found related reporting: "${top.title}" from ${top.source}, but could not independently verify the claim.`,
+      source: top.source || "Nigerian news index",
+      sources: articles.slice(0, 3).map((a) => ({
+        title: a.title,
+        url: a.link,
+        site: a.source,
+      })),
+    };
+    data.formatted = buildFormatted(data);
+    return data;
+  }
+  const data = {
+    verdict: "UNVERIFIED",
+    confidence: 40,
+    whatWeFound:
+      "We could not determine a clear answer based on the available evidence. Please send more details or check back later.",
+    source: "No specific source on file",
+    sources: [],
+  };
   data.formatted = buildFormatted(data);
   return data;
 }
@@ -218,11 +290,16 @@ export async function buildVerdict(claim, ctx = {}) {
     `"sources":[{"title":"...","url":"https://...","site":"domain"}]}` +
     `Use real URLs only from evidence; if none usable, sources is [].`;
 
-  const raw = await withTimeout(callModel(prompt, 600));
+  let raw = "";
+  try {
+    raw = await withTimeout(callModel(prompt, 600));
+  } catch (err) {
+    console.error(`[FactCheck] LLM call failed: ${err.message}`);
+  }
   const parsed = parseJsonSafely(raw);
 
   if (!parsed || !parsed.whatWeFound) {
-    const fallback = fallbackVerdict(claim, { kbMatches });
+    const fallback = fallbackVerdict(claim, { kbMatches, articles });
     setCache(claim, fallback);
     return fallback;
   }
