@@ -263,6 +263,25 @@ function buildFormatted(data) {
   );
 }
 
+/**
+ * Checks if an article has substantive relevance to the predicate of a claim.
+ * Prevents citing "APC protest" articles as evidence for "is tinubu dead".
+ */
+function isArticleRelevantToClaim(article, claim) {
+  if (!article) return false;
+  const haystack = `${article.title || ""} ${article.snippet || ""}`.toLowerCase();
+  const words = normalizeClaim(claim)
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+  // Common entity names that are NOT enough on their own
+  const entityNames = new Set(["tinubu", "shettima", "obi", "atiku", "buhari", "nigeria", "apc", "pdp", "lp", "inec"]);
+  const predicateWords = words.filter((w) => !entityNames.has(w));
+
+  if (predicateWords.length === 0) return true;
+  return predicateWords.some((w) => haystack.includes(w));
+}
+
 function fallbackVerdict(claim, ctx = {}) {
   const kb = (ctx.kbMatches || []).find((e) => e.verdict && e.verdict !== "UNVERIFIED" && e.matchedClaimWords >= 2);
   if (kb) {
@@ -276,15 +295,19 @@ function fallbackVerdict(claim, ctx = {}) {
     data.formatted = buildFormatted(data);
     return data;
   }
-  const articles = ctx.articles || [];
-  if (articles.length > 0) {
-    const top = articles[0];
+
+  const rawArticles = ctx.articles || [];
+  // ONLY use articles if they actually match the specific claim predicate
+  const relevantArticles = rawArticles.filter((a) => isArticleRelevantToClaim(a, claim));
+
+  if (relevantArticles.length > 0) {
+    const top = relevantArticles[0];
     const data = {
       verdict: "UNVERIFIED",
       confidence: 50,
       whatWeFound: `We found related reporting: "${top.title}" from ${top.source}, but could not independently confirm this claim.`,
       source: top.source || "Nigerian news index",
-      sources: articles.slice(0, 3).map((a) => ({
+      sources: relevantArticles.slice(0, 3).map((a) => ({
         title: a.title,
         url: a.link,
         site: a.source,
@@ -293,6 +316,7 @@ function fallbackVerdict(claim, ctx = {}) {
     data.formatted = buildFormatted(data);
     return data;
   }
+
   const data = {
     verdict: "UNVERIFIED",
     confidence: 40,
@@ -332,6 +356,12 @@ export async function buildVerdict(claim, ctx = {}) {
     `Never invent facts, dates, people, events, URLs, or sources. Never use outside knowledge to fill gaps. ` +
     `If evidence is insufficient or conflicting, return UNVERIFIED and state what is missing. ` +
     `Cite only sources present in the evidence. Keep response concise and factual.\n\n` +
+    `CRITICAL RELEVANCE RULE: An article that merely mentions the same person, party, or institution ` +
+    `is NOT evidence for/against the specific claim. Only cite articles whose content DIRECTLY addresses ` +
+    `the specific assertion being checked. For example, if the claim is "is tinubu dead", an article about ` +
+    `"APC protest against Tinubu" or "fuel subsidy removal by Tinubu" is NOT relevant evidence about his death. ` +
+    `If NO evidence directly addresses the specific claim, return UNVERIFIED and state that no credible reports ` +
+    `were found confirming or denying this specific claim, with sources as [].\n\n` +
     `Decision rules: VERIFIED = multiple independent credible sources confirm it. FALSE = multiple independent credible sources disprove it. ` +
     `Single-source or weak/conflicting evidence => MISLEADING or UNVERIFIED. ` +
     `Confidence: 90%+ needs 3+ independent sources, 70-89% needs 2+, otherwise below 70%.\n\n` +

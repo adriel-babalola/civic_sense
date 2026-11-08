@@ -478,6 +478,7 @@ export async function getAdminStats(scraperStats = null) {
       channelAgg,
       reportAgg,
       suggestionAgg,
+      feedbackAgg,
       articlesCount,
     ] = await Promise.all([
       FactCheck.countDocuments(),
