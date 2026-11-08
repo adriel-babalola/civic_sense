@@ -10,12 +10,12 @@ const KB_PATH = path.join(__dirname, "..", "data", "civic_kb.json");
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEEPSEEK_MODEL = process.env.LLM_MODEL_DEEPSEEK || "deepseek-chat";
-const OPENROUTER_MODEL = process.env.LLM_MODEL || "deepseek/deepseek-chat-v3-0324";
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 9000;
+const DEEPSEEK_MODEL = (process.env.LLM_MODEL_DEEPSEEK || process.env.ROUTER_MODEL_DEEPSEEK || "deepseek-chat").trim();
+const OPENROUTER_MODEL = (process.env.LLM_MODEL || process.env.ROUTER_MODEL || "deepseek/deepseek-chat-v3-0324").trim();
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 12000;
 
 function normalizeClaim(claim) {
-  return claim.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
+  return String(claim || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").trim();
 }
 
 function getCached(claim) {
@@ -30,20 +30,53 @@ let kbCache = null;
 
 export function loadKnowledgeBase() {
   if (kbCache) return kbCache;
-  kbCache = JSON.parse(fs.readFileSync(KB_PATH, "utf-8"));
+  try {
+    kbCache = JSON.parse(fs.readFileSync(KB_PATH, "utf-8"));
+  } catch {
+    kbCache = [];
+  }
   return kbCache;
 }
 
+const STOP_WORDS = new Set([
+  "is", "it", "the", "a", "an", "did", "was", "has", "who", "what", "where",
+  "when", "why", "how", "to", "in", "on", "for", "of", "and", "or", "by", "from",
+  "that", "this", "these", "those", "are", "were", "been", "being", "be", "do",
+  "does", "say", "said", "saying", "tell", "told", "ask", "asked", "claim", "about",
+  "please", "can", "could", "will", "would", "any", "all", "true", "false", "really"
+]);
+
 export function searchKnowledgeBase(claim) {
   const kb = loadKnowledgeBase();
-  const query = normalizeClaim(claim).split(/\s+/).filter(Boolean);
+  const queryWords = normalizeClaim(claim)
+    .split(/\s+/)
+    .filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+  if (queryWords.length === 0) return [];
+
   const scored = kb.map((entry) => {
-    const text = `${entry.topic} ${entry.claim} ${entry.explanation}`.toLowerCase();
-    const score = query.filter((word) => text.includes(word)).length;
-    return { ...entry, score };
+    const claimWords = normalizeClaim(entry.claim).split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+    const topicWords = normalizeClaim(entry.topic).split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+    const expWords = normalizeClaim(entry.explanation).split(/\s+/).filter((w) => w.length > 2 && !STOP_WORDS.has(w));
+
+    let matchedClaimWords = 0;
+    let matchedTopicWords = 0;
+    let matchedExpWords = 0;
+
+    for (const w of queryWords) {
+      if (claimWords.includes(w)) matchedClaimWords++;
+      if (topicWords.includes(w)) matchedTopicWords++;
+      if (expWords.includes(w)) matchedExpWords++;
+    }
+
+    const score = matchedClaimWords * 3 + matchedTopicWords * 2 + matchedExpWords * 1;
+    return { ...entry, score, matchedClaimWords };
   });
+
   scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, 5).filter((e) => e.score > 0);
+  // Match requires at least 2 distinct substantive claim words to prevent false-positive matching
+  // (e.g. asking "is tinubu dead" should NEVER match "Fuel subsidy removed by Tinubu")
+  return scored.filter((e) => e.matchedClaimWords >= 2 && e.score >= 6).slice(0, 5);
 }
 
 export function buildKnowledgeContext(kbMatches) {
@@ -57,61 +90,82 @@ export function buildKnowledgeContext(kbMatches) {
     : "No matching entries in the civic knowledge base.";
 }
 
-async function callModel(messages, maxTokens = 500, options = {}) {
+function resolveProviders() {
+  const deepseekRaw = (
+    process.env.DEEPSEEK_API_KEY ||
+    process.env.DEEPSEEK_KEY ||
+    process.env.DEEP_SEEK_API_KEY ||
+    ""
+  ).trim().replace(/^["']|["']$/g, "");
+
+  const openrouterRaw = (
+    process.env.OPENROUTER_API_KEY ||
+    ""
+  ).trim().replace(/^["']|["']$/g, "");
+
+  const providers = [];
+
+  if (deepseekRaw) {
+    if (deepseekRaw.startsWith("sk-or-")) {
+      providers.push({
+        name: "openrouter",
+        url: OPENROUTER_URL,
+        key: deepseekRaw,
+        model: "deepseek/deepseek-chat-v3-0324",
+      });
+    } else {
+      providers.push({
+        name: "deepseek",
+        url: DEEPSEEK_URL,
+        key: deepseekRaw,
+        model: "deepseek-chat",
+      });
+    }
+  }
+
+  if (openrouterRaw && !providers.some((p) => p.name === "openrouter")) {
+    providers.push({
+      name: "openrouter",
+      url: OPENROUTER_URL,
+      key: openrouterRaw,
+      model: OPENROUTER_MODEL,
+    });
+  }
+
+  return providers;
+}
+
+async function callModel(messages, maxTokens = 600, options = {}) {
   const normalized =
     typeof messages === "string"
       ? [{ role: "user", content: messages }]
       : messages;
 
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-
   const hasImage = Array.isArray(normalized) && normalized.some((m) =>
     Array.isArray(m.content) && m.content.some((c) => c.type === "image_url")
   );
 
-  const providers = [];
-
-  // DeepSeek primary (if not an image payload)
-  if (deepseekKey && !hasImage) {
-    providers.push({
-      name: "deepseek",
-      url: DEEPSEEK_URL,
-      key: deepseekKey,
-      model: DEEPSEEK_MODEL,
-      payload: {
-        model: DEEPSEEK_MODEL,
-        messages: normalized,
-        temperature: 0,
-        max_tokens: maxTokens,
-      },
-    });
-  }
-
-  // OpenRouter (supports text and vision)
-  if (openrouterKey) {
-    providers.push({
-      name: "openrouter",
-      url: OPENROUTER_URL,
-      key: openrouterKey,
-      model: hasImage ? "google/gemini-2.0-flash-lite" : OPENROUTER_MODEL,
-      payload: {
-        model: hasImage ? "google/gemini-2.0-flash-lite" : OPENROUTER_MODEL,
-        messages: normalized,
-        temperature: 0,
-        max_tokens: maxTokens,
-        reasoning: { effort: "none", exclude: true },
-        ...options,
-      },
-    });
+  const available = resolveProviders();
+  if (available.length === 0) {
+    throw new Error("No LLM API key configured (set DEEPSEEK_API_KEY or OPENROUTER_API_KEY)");
   }
 
   let lastError = null;
-  for (const p of providers) {
+  for (const p of available) {
+    if (hasImage && p.name !== "openrouter") continue;
+
+    const payload = {
+      model: hasImage ? "google/gemini-2.0-flash-lite" : p.model,
+      messages: normalized,
+      temperature: 0,
+      max_tokens: maxTokens,
+      ...options,
+    };
+
     try {
       const response = await axios.post(
         p.url,
-        p.payload,
+        payload,
         {
           headers: {
             Authorization: `Bearer ${p.key}`,
@@ -131,14 +185,14 @@ async function callModel(messages, maxTokens = 500, options = {}) {
   }
 
   if (lastError) throw lastError;
-  throw new Error("No LLM API key configured (set DEEPSEEK_API_KEY or OPENROUTER_API_KEY)");
+  throw new Error("All LLM providers failed");
 }
 
 function withTimeout(promise, ms = LLM_TIMEOUT_MS) {
   let timer;
   const timeout = new Promise((_, reject) => {
     timer = setTimeout(
-      () => reject(new Error(`LLM timed out after ${ms}ms`)),
+      () => reject(new Error(`Fact check timed out after ${ms}ms`)),
       ms
     );
   });
@@ -210,11 +264,11 @@ function buildFormatted(data) {
 }
 
 function fallbackVerdict(claim, ctx = {}) {
-  const kb = (ctx.kbMatches || []).find((e) => e.verdict && e.verdict !== "UNVERIFIED");
+  const kb = (ctx.kbMatches || []).find((e) => e.verdict && e.verdict !== "UNVERIFIED" && e.matchedClaimWords >= 2);
   if (kb) {
     const data = {
       verdict: kb.verdict,
-      confidence: 70,
+      confidence: 75,
       whatWeFound: kb.explanation,
       source: kb.source,
       sources: [],
@@ -228,7 +282,7 @@ function fallbackVerdict(claim, ctx = {}) {
     const data = {
       verdict: "UNVERIFIED",
       confidence: 50,
-      whatWeFound: `We found related reporting: "${top.title}" from ${top.source}, but could not independently verify the claim.`,
+      whatWeFound: `We found related reporting: "${top.title}" from ${top.source}, but could not independently confirm this claim.`,
       source: top.source || "Nigerian news index",
       sources: articles.slice(0, 3).map((a) => ({
         title: a.title,
@@ -243,8 +297,8 @@ function fallbackVerdict(claim, ctx = {}) {
     verdict: "UNVERIFIED",
     confidence: 40,
     whatWeFound:
-      "We could not determine a clear answer based on the available evidence. Please send more details or check back later.",
-    source: "No specific source on file",
+      `We could not find verified evidence or reports confirming: "${claim}". No major Nigerian news source or official government release has verified this.`,
+    source: "Nigerian newsrooms & fact-check index",
     sources: [],
   };
   data.formatted = buildFormatted(data);

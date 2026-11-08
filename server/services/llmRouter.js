@@ -3,7 +3,7 @@ import axios from "axios";
 const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
-const DEEPSEEK_MODEL = (process.env.ROUTER_MODEL_DEEPSEEK || "deepseek-chat").trim();
+const DEEPSEEK_MODEL = (process.env.ROUTER_MODEL_DEEPSEEK || process.env.LLM_MODEL_DEEPSEEK || "deepseek-chat").trim();
 const OPENROUTER_MODEL = (process.env.ROUTER_MODEL || process.env.LLM_MODEL || "deepseek/deepseek-chat-v3-0324").trim();
 const TIMEOUT_MS = Number(process.env.ROUTER_TIMEOUT_MS || 6000);
 
@@ -20,7 +20,7 @@ INTENT DEFINITIONS:
    - For "How are you": "I'm doing great, thank you! Ready to help you fact-check any Nigerian news or political claims."
    - For "What's your favorite color?": "I don't have personal favorites, but I'm always ready to help you verify facts."
    - For "Who are you?" or "What do you do?": "I'm CivicSense, an independent fact-checking assistant dedicated to verifying Nigerian political claims and news."
-2. "fact_checking": Any verifiable claim, rumor, news event, political assertion, government policy, election issue, or question about Nigerian public figures.
+2. "fact_checking": Any verifiable claim, rumor, news event, political assertion, government policy, election issue, public figure action, death/arrest rumor, or question about Nigerian public affairs (e.g. "is tinubu dead", "did inec announce election dates", "who is the governor of kano", "tinubu don buy new jet").
    - Extract the core assertion into "search_query" (clean English keywords, max 12 words, strip filler). Translate Pidgin to clean English keywords.
    - Leave "reply" empty ("").
 3. "off_topic": Out-of-scope LLM tasks such as requests to write essays (e.g. World War 2), write code, do homework, compose poems/stories, solve general science/math problems, or philosophical life essays (e.g. "what is the meaning of life").
@@ -133,10 +133,41 @@ export function fallback(text, context = {}) {
       source: "fallback",
     };
   }
-  const civic = /\b(nigeria|tinubu|shettima|obi|atiku|inec|apc|pdp|lp|senate|house|governor|president|election|vote|policy|budget|naira|subsidy|constitution|court|efcc|police|minister|bill|law)\b/.test(t);
-  const facty = /\b(is it true|true or false|did|was|has|claim|fact check|verify|rumor|fake|hoax)\b/.test(t) || (civic && t.length > 20);
-  if (facty) return { intent: "fact_checking", reply: "", search_query: text, confidence: 0.55, source: "fallback" };
-  if (civic) return { intent: "casual", reply: "Send the specific Nigerian civic or political claim you want me to fact-check.", search_query: text, confidence: 0.5, source: "fallback" };
+
+  const civic = /\b(nigeria|tinubu|shettima|obi|atiku|inec|apc|pdp|lp|senate|house|governor|president|election|vote|policy|budget|naira|subsidy|constitution|court|efcc|police|minister|bill|law|buhari|sanwo-olu|fubara|wike)\b/.test(t);
+  const facty = /\b(is|did|was|has|are|were|will|can|dead|die|died|death|alive|kill|killed|arrest|arrested|sack|sacked|resign|resigned|steal|stole|stolen|bribe|bribed|buy|bought|true|false|claim|verify|rumor|fake|hoax|fact\s*check|who|what|why|when|where|how much)\b/.test(t);
+
+  // If it mentions a civic figure or institution and any assertion/question word, route to fact-checking
+  if (civic && (facty || t.length > 12)) {
+    return {
+      intent: "fact_checking",
+      reply: "",
+      search_query: text,
+      confidence: 0.8,
+      source: "fallback",
+    };
+  }
+
+  if (facty && t.length > 15) {
+    return {
+      intent: "fact_checking",
+      reply: "",
+      search_query: text,
+      confidence: 0.6,
+      source: "fallback",
+    };
+  }
+
+  if (civic) {
+    return {
+      intent: "casual",
+      reply: "Send the specific Nigerian civic or political claim you want me to fact-check.",
+      search_query: text,
+      confidence: 0.5,
+      source: "fallback",
+    };
+  }
+
   if (t.length <= 25) {
     return {
       intent: "casual",
@@ -146,6 +177,7 @@ export function fallback(text, context = {}) {
       source: "fallback",
     };
   }
+
   const repeat = Boolean(context?.lastIntent === "off_topic");
   return {
     intent: "off_topic",
@@ -154,6 +186,54 @@ export function fallback(text, context = {}) {
     confidence: 0.7,
     source: "fallback",
   };
+}
+
+function resolveProviders() {
+  const deepseekRaw = (
+    process.env.DEEPSEEK_API_KEY ||
+    process.env.DEEPSEEK_KEY ||
+    process.env.DEEP_SEEK_API_KEY ||
+    ""
+  ).trim().replace(/^["']|["']$/g, "");
+
+  const openrouterRaw = (
+    process.env.OPENROUTER_API_KEY ||
+    ""
+  ).trim().replace(/^["']|["']$/g, "");
+
+  const providers = [];
+
+  if (deepseekRaw) {
+    if (deepseekRaw.startsWith("sk-or-")) {
+      providers.push({
+        name: "openrouter",
+        url: OPENROUTER_URL,
+        key: deepseekRaw,
+        model: "deepseek/deepseek-chat-v3-0324",
+        responseFormat: false,
+      });
+    } else {
+      providers.push({
+        name: "deepseek",
+        url: DEEPSEEK_URL,
+        key: deepseekRaw,
+        model: "deepseek-chat",
+        responseFormat: true,
+      });
+    }
+  }
+
+  if (openrouterRaw && !providers.some((p) => p.name === "openrouter")) {
+    providers.push({
+      name: "openrouter",
+      url: OPENROUTER_URL,
+      key: openrouterRaw,
+      model: OPENROUTER_MODEL,
+      responseFormat: false,
+    });
+  }
+
+  return providers;
 }
 
 async function callProvider({ url, key, model, messages, timeout, responseFormat }) {
@@ -180,10 +260,8 @@ async function callProvider({ url, key, model, messages, timeout, responseFormat
 }
 
 export async function routeConversationalMessage(text, context = {}) {
-  const deepseekKey = process.env.DEEPSEEK_API_KEY;
-  const openrouterKey = process.env.OPENROUTER_API_KEY;
-
-  if (!deepseekKey && !openrouterKey) {
+  const providers = resolveProviders();
+  if (providers.length === 0) {
     return fallback(text, context);
   }
 
@@ -194,26 +272,6 @@ export async function routeConversationalMessage(text, context = {}) {
       content: `Context: ${JSON.stringify({ lastIntent: context?.lastIntent || null, repeatOffTopic: context?.lastIntent === "off_topic" })}\nUser message: ${text}`,
     },
   ];
-
-  const providers = [];
-  if (deepseekKey) {
-    providers.push({
-      name: "deepseek",
-      url: DEEPSEEK_URL,
-      key: deepseekKey,
-      model: DEEPSEEK_MODEL,
-      responseFormat: true,
-    });
-  }
-  if (openrouterKey) {
-    providers.push({
-      name: "openrouter",
-      url: OPENROUTER_URL,
-      key: openrouterKey,
-      model: OPENROUTER_MODEL,
-      responseFormat: false,
-    });
-  }
 
   for (const provider of providers) {
     try {

@@ -1,4 +1,3 @@
-import { searchKnowledgeBase } from "./gemini.js";
 import { routeConversationalMessage, OFFTOPIC_REJECTION } from "./llmRouter.js";
 
 const OFFTOPIC_REDIRECT = OFFTOPIC_REJECTION;
@@ -10,17 +9,6 @@ function normalizeMessage(text) {
     .toLowerCase();
 }
 
-function kbAnswer(query) {
-  try {
-    const matches = searchKnowledgeBase(query);
-    const top = matches.find((m) => m.verdict && m.verdict !== "UNVERIFIED") || matches[0];
-    if (!top) return null;
-    return `${top.explanation}\n\nSource: ${top.source}`;
-  } catch {
-    return null;
-  }
-}
-
 export async function routeMessage(text, { hasImage = false, context = {} } = {}) {
   if (hasImage) return { intent: "fact-check", router: { source: "image" } };
 
@@ -29,7 +17,7 @@ export async function routeMessage(text, { hasImage = false, context = {} } = {}
 
   const routed = await routeConversationalMessage(String(text).trim(), context);
   if (routed?.intent === "fact_checking") {
-    return { intent: "fact-check", searchQuery: routed.search_query || "", router: routed };
+    return { intent: "fact-check", searchQuery: routed.search_query || text, router: routed };
   }
   if (routed?.intent === "off_topic") {
     const repeat = Boolean(context?.lastIntent === "off_topic");
@@ -39,10 +27,6 @@ export async function routeMessage(text, { hasImage = false, context = {} } = {}
       router: routed,
       repeat,
     };
-  }
-  if (routed?.search_query) {
-    const answer = kbAnswer(routed.search_query);
-    if (answer) return { intent: "casual", reply: answer, router: routed };
   }
   return {
     intent: "casual",
