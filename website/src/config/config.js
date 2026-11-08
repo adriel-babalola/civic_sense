@@ -10,6 +10,8 @@ export const CONFIG = {
   API_BASE_URL: (env.VITE_API_URL || "https://civic-sense-8d2m.onrender.com").replace(/\/+$/, ""),
   CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "hello@civicsense.ng",
   GITHUB_URL: env.VITE_GITHUB_URL || "https://github.com/adriel-babalola/civic_sense",
+  MAX_UPLOAD_BYTES: 5 * 1024 * 1024,
+  ACCEPTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif"],
   WHATSAPP: {
     joinLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
     chatLink: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
