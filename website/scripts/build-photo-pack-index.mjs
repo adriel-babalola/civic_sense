@@ -57,7 +57,6 @@ const MANIFEST_FILE = resolve(HERE, "../../research/photo-pack/manifest.json");
  * profile, because the profiles that exist are candidates.
  */
 const ROSTER_MATCHES = {
-  "Abba Kabir Yusuf": "kabiru-yusuf",
   "Atiku Abubakar": "atiku-abubakar",
   "Bola Ahmed Tinubu": "bola-ahmed-tinubu",
   "Kashim Shettima": "kashim-shettima",
@@ -103,7 +102,11 @@ function parseNote(text) {
   const rightsLine = (text.match(/Rights note:\s*\n([^\n]+)/) || [])[1] || "";
   const rights = rightsLine.replace(/^Rights:\s*/, "").trim();
   const name = (text.match(/Politician:\s*(.+)/) || [])[1]?.trim() || "";
-  return { name, source, rights };
+  // Optional. Attribution is required for the open-licence entries, so where the
+  // note names the photographer or uploader it is carried through to the credit
+  // instead of being flattened to "Unknown".
+  const author = (text.match(/Author:\s*(.+)/) || [])[1]?.trim() || "";
+  return { name, source, rights, author };
 }
 
 /*
@@ -144,6 +147,7 @@ const entries = manifest.map((record) => {
     licenceUrl: openLicence?.licenseUrl || null,
     onCommons: isCommons,
     sourceIsStable: !isUnciteableSource(note.source),
+    author: note.author || null,
     rosterId: ROSTER_MATCHES[record.packName] || null,
   };
 });
@@ -153,6 +157,14 @@ const usable = entries.filter((entry) => entry.usable);
 const noImage = entries.filter((entry) => !entry.usable);
 const notOnRoster = entries.filter((entry) => !entry.rosterId);
 const onRoster = entries.filter((entry) => entry.rosterId);
+// Named in the generated header, so adding a cleared image never leaves the
+// prose claiming a stale count or a stale set of names.
+const clearedNames = cleared.map((entry) => entry.packName).join(", ") || "none";
+const lowResNames = usable
+  .filter((entry) => entry.lowResolution)
+  .map((entry) => entry.packName)
+  .join(", ") || "none";
+const noImageNames = noImage.map((entry) => entry.packName).join(", ") || "none";
 
 /*
  * The credits emitted here describe the images truthfully: the real source, and
@@ -167,7 +179,7 @@ const photoCredits = entries
     entry.asset,
     {
       file: entry.asset,
-      author: "Unknown",
+      author: entry.author || "Unknown",
       license: entry.rightsStatus === "open-licence" ? entry.licence : "Licence not verified",
       licenseUrl: entry.rightsStatus === "open-licence" ? entry.licenceUrl : null,
       source: entry.source,
@@ -195,7 +207,7 @@ const body = `/**
  * HOW THESE IMAGES ARE TREATED
  *
  * All ${usable.length} of them are wired into the site at the owner's instruction, and ${cleared.length} of those
- * (Atiku, Kwankwaso, Barau Jibrin) additionally carry a verified open licence.
+ * (${clearedNames}) additionally carry a verified open licence.
  * The other ${usable.length - cleared.length} were found by image search and came from X, news
  * outlets, campaign sites and image-search permalinks. Their rights notes all
  * read "not independently verified", so the credit records exactly that: a real
@@ -208,8 +220,8 @@ const body = `/**
  * source is a publisher's own CDN, since those are unambiguously that
  * publisher's work. PACK_SOURCES_NEEDING_PERMISSION lists them.
  *
- * ${noImage.length} folder has no image at all: Cleopas Zuwoghe's file is a saved Bing results page, so
- * there is no photograph of him here.
+ * ${noImage.length} folder has no image at all: ${noImageNames}'s file is a saved Bing results page, so
+ * there is no photograph of him here. Any low-resolution hold-outs: ${lowResNames}.
  *
  * ${notOnRoster.length} of the ${entries.length} are not on a certified 2027 ticket in this dataset. They are serving
  * governors, senators and party chairs, which is a different dataset needing its
@@ -231,6 +243,7 @@ const body = `/**
  * @property {string|null} licenceUrl
  * @property {boolean} onCommons
  * @property {boolean} sourceIsStable  False for image-search permalinks.
+ * @property {string|null} author    Photographer/uploader, where the note names one.
  * @property {string|null} rosterId  Certified roster slug, or null.
  */
 

@@ -20,6 +20,7 @@ const COLUMNS = [
       { to: "/live", label: "Live verification feed" },
       { to: "/sources", label: "Where we check" },
       { to: "/faq", label: "Questions and answers" },
+      { to: "/feedback", label: "Feedback" },
     ],
   },
   {
@@ -119,6 +120,10 @@ export function Footer() {
             {" · "}
             <Link to="/data-deletion" className="underline underline-offset-2 hover:text-fg-secondary">
               Data deletion
+            </Link>
+            {" · "}
+            <Link to="/feedback" className="underline underline-offset-2 hover:text-fg-secondary">
+              Feedback
             </Link>
             {" · "}
             <Link to="/credits" className="underline underline-offset-2 hover:text-fg-secondary">

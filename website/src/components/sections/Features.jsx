@@ -222,7 +222,7 @@ export function Mission() {
               },
               {
                 icon: Zap,
-                title: "Truth in Seconds",
+                title: "Facts in Seconds",
                 body: "CivicSense puts truth awareness in the path of the rumour. You forward the claim and get an answer with the reporting attached, so you judge the evidence yourself instead of taking our word for it.",
               },
               {

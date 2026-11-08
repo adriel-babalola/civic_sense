@@ -42,32 +42,24 @@ services:
         sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
         sync: false
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_WHATSAPP_NUMBER
-        sync: false
+      - key: JWT_SECRET
+        generateValue: true
       - key: SCRAPE_SECRET
         generateValue: true
       - key: LLM_MODEL
-        value: google/gemini-2.5-flash
-      - key: LLM_TIMEOUT_MS
-        value: "12000"
-      - key: PIPELINE_DEADLINE_MS
-        value: "14000"
+        value: deepseek/deepseek-chat-v3-0324
+      - key: ROUTER_MODEL
+        value: deepseek/deepseek-chat-v3-0324
       - key: ROUTER_MODEL_DEEPSEEK
         value: deepseek-chat
-      - key: ROUTER_MODEL_GROQ
-        value: llama-3.1-8b-instant
-      - key: ROUTER_MODEL_OR
-        value: google/gemini-2.0-flash-lite
+      - key: LLM_TIMEOUT_MS
+        value: "9000"
+      - key: PIPELINE_DEADLINE_MS
+        value: "12000"
       - key: ROUTER_TIMEOUT_MS
-        value: "2500"
+        value: "3500"
       - key: ROUTER_BUDGET_MS
         value: "3500"
-      - key: ROUTER_MIN_CONFIDENCE
-        value: "0.55"
       - key: ROUTER_STATIC_REPLIES
         value: "false"
       - key: SCRAPE_INTERVAL_MIN
@@ -78,6 +70,8 @@ services:
         value: "5"
       - key: META_MEDIA_MAX_MB
         value: "5"
+      - key: META_TIMEOUT_MS
+        value: "15000"
       - key: CACHE_TTL_SEC
         value: "3600"
       - key: CACHE_MAX_ENTRIES

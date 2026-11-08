@@ -1,5 +1,7 @@
-import { classifyIntent, STATIC_REPLIES } from "./intentRouter.js";
 import { searchKnowledgeBase } from "./gemini.js";
+import { routeConversationalMessage, OFFTOPIC_REJECTION } from "./llmRouter.js";
+
+const OFFTOPIC_REDIRECT = OFFTOPIC_REJECTION;
 
 function normalizeMessage(text) {
   return String(text || "")
@@ -13,51 +15,40 @@ function kbAnswer(query) {
     const matches = searchKnowledgeBase(query);
     const top = matches.find((m) => m.verdict && m.verdict !== "UNVERIFIED") || matches[0];
     if (!top) return null;
-    return `${top.explanation}\n\nSource: ${top.source}\n\n${STATIC_REPLIES.closer}`;
+    return `${top.explanation}\n\nSource: ${top.source}`;
   } catch {
     return null;
   }
 }
 
-function mapIntent(route) {
-  if (!route || route.ambiguous) {
-    return { intent: "unclear", reply: STATIC_REPLIES.clarify, router: route };
+export async function routeMessage(text, { hasImage = false, context = {} } = {}) {
+  if (hasImage) return { intent: "fact-check", router: { source: "image" } };
+
+  const normalized = normalizeMessage(text);
+  if (!normalized) return { intent: "unclear", reply: "Send a Nigerian civic or political claim to fact-check." };
+
+  const routed = await routeConversationalMessage(String(text).trim(), context);
+  if (routed?.intent === "fact_checking") {
+    return { intent: "fact-check", searchQuery: routed.search_query || "", router: routed };
   }
-  if (route.intent === "news_update") return { intent: "news", router: route };
-  if (route.intent === "fact_checking") {
-    return { intent: "fact-check", searchQuery: route.search_query, router: route };
-  }
-  if (route.intent === "off_topic") {
+  if (routed?.intent === "off_topic") {
+    const repeat = Boolean(context?.lastIntent === "off_topic");
     return {
-      intent: "unclear",
-      reply: route.reply || STATIC_REPLIES.offTopic,
-      router: route,
+      intent: "off_topic",
+      reply: repeat ? OFFTOPIC_REDIRECT : (routed.reply || OFFTOPIC_REDIRECT),
+      router: routed,
+      repeat,
     };
   }
-  if (route.search_query) {
-    const answer = kbAnswer(route.search_query);
-    if (answer) return { intent: "casual", reply: answer, router: route };
+  if (routed?.search_query) {
+    const answer = kbAnswer(routed.search_query);
+    if (answer) return { intent: "casual", reply: answer, router: routed };
   }
   return {
     intent: "casual",
-    reply: route.reply || STATIC_REPLIES.greeting,
-    router: route,
+    reply: routed?.reply || "I can help fact-check Nigerian civic or political claims. Send the claim you want checked.",
+    router: routed,
   };
 }
 
-export async function routeMessage(text, { hasImage = false } = {}) {
-  if (hasImage) return { intent: "fact-check" };
-
-  const normalized = normalizeMessage(text);
-  if (!normalized) return { intent: "unclear", reply: STATIC_REPLIES.clarify };
-
-  let route = null;
-  try {
-    route = await classifyIntent(String(text).trim());
-  } catch (err) {
-    console.error(`[Router] classifyIntent threw: ${err.message}`);
-  }
-  return mapIntent(route);
-}
-
-export { STATIC_REPLIES };
+export { OFFTOPIC_REDIRECT };

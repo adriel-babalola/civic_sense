@@ -8,8 +8,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const KB_PATH = path.join(__dirname, "..", "data", "civic_kb.json");
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
-const MODEL = process.env.LLM_MODEL || "google/gemini-2.5-flash";
-const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 25000;
+const MODEL = process.env.LLM_MODEL || "deepseek/deepseek-chat-v3-0324";
+const LLM_TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS) || 9000;
 
 function normalizeClaim(claim) {
   return claim.toLowerCase().replace(/[^a-z0-9\s]/g, "").trim();
@@ -54,7 +54,7 @@ export function buildKnowledgeContext(kbMatches) {
     : "No matching entries in the civic knowledge base.";
 }
 
-async function callModel(messages, maxTokens = 600) {
+async function callModel(messages, maxTokens = 500, options = {}) {
   const normalized =
     typeof messages === "string"
       ? [{ role: "user", content: messages }]
@@ -64,8 +64,10 @@ async function callModel(messages, maxTokens = 600) {
     {
       model: MODEL,
       messages: normalized,
-      temperature: 0.1,
+      temperature: 0,
       max_tokens: maxTokens,
+      reasoning: { effort: "none", exclude: true },
+      ...options,
     },
     {
       headers: {
@@ -77,7 +79,7 @@ async function callModel(messages, maxTokens = 600) {
       timeout: LLM_TIMEOUT_MS,
     }
   );
-  return response.data.choices[0].message.content;
+  return response.data?.choices?.[0]?.message?.content || "";
 }
 
 function withTimeout(promise, ms = LLM_TIMEOUT_MS) {
@@ -199,21 +201,22 @@ export async function buildVerdict(claim, ctx = {}) {
       .join("\n\n") || "No live evidence available for this claim.";
 
   const prompt =
-    `You are Kratos, a Nigerian civic fact-checking AI. Fact-check the user's claim using ONLY the evidence below. ` +
-    `Do not guess. Do not rely on your training data unless no evidence is provided. ` +
-    `Write 2 to 3 plain English sentences any Nigerian can understand.\n\n` +
-    `MULTI-SOURCE RULE: Return VERIFIED only if multiple independent sources confirm it. ` +
-    `Return FALSE only if multiple independent sources confirm it is false. ` +
-    `If only one source supports a verdict, lean toward MISLEADING or UNVERIFIED. ` +
-    `Confidence: 90%+ needs 3+ independent sources, 70-89% needs 2+, otherwise stay below 70%.\n\n` +
+    `You are CivicSense, a Nigerian civic and political fact-checking assistant. ` +
+    `Primary function: verify Nigerian civic/political claims using ONLY the evidence provided. ` +
+    `Never invent facts, dates, people, events, URLs, or sources. Never use outside knowledge to fill gaps. ` +
+    `If evidence is insufficient or conflicting, return UNVERIFIED and state what is missing. ` +
+    `Cite only sources present in the evidence. Keep response concise and factual.\n\n` +
+    `Decision rules: VERIFIED = multiple independent credible sources confirm it. FALSE = multiple independent credible sources disprove it. ` +
+    `Single-source or weak/conflicting evidence => MISLEADING or UNVERIFIED. ` +
+    `Confidence: 90%+ needs 3+ independent sources, 70-89% needs 2+, otherwise below 70%.\n\n` +
     `User claim: "${claim}"\n\n` +
     `--- KNOWLEDGE BASE ---\n${kbContext}\n\n` +
     `--- EVIDENCE ---\n${evidence}\n\n` +
-    `Respond with ONLY a single valid JSON object, no markdown, with exactly these keys:\n` +
-    `{"verdict": "VERIFIED|MISLEADING|FALSE|UNVERIFIED", "confidence": 0-100, ` +
-    `"whatWeFound": "2-3 plain sentences", "source": "short source label", ` +
-    `"sources": [{"title": "...", "url": "full working URL from evidence", "site": "domain name"}], }` +
-    `Use real URLs only from the evidence; if none are usable, sources is [].`;
+    `Respond with ONLY valid JSON, no markdown:\n` +
+    `{"verdict":"VERIFIED|MISLEADING|FALSE|UNVERIFIED","confidence":0-100,` +
+    `"whatWeFound":"2-3 short factual sentences grounded in evidence","source":"short source label",` +
+    `"sources":[{"title":"...","url":"https://...","site":"domain"}]}` +
+    `Use real URLs only from evidence; if none usable, sources is [].`;
 
   const raw = await withTimeout(callModel(prompt, 600));
   const parsed = parseJsonSafely(raw);

@@ -21,8 +21,8 @@ export function FileUpload({ value, onChange, error, hint, maxBytes, acceptedTyp
   const [meta, setMeta] = useState(null);
   const [localError, setLocalError] = useState(null);
 
-  const limit = maxBytes ?? CONFIG.MAX_UPLOAD_BYTES;
-  const types = acceptedTypes ?? CONFIG.ACCEPTED_IMAGE_TYPES;
+  const limit = maxBytes ?? CONFIG.MAX_UPLOAD_BYTES ?? 5 * 1024 * 1024;
+  const types = (Array.isArray(acceptedTypes) ? acceptedTypes : CONFIG.ACCEPTED_IMAGE_TYPES) || ["image/jpeg","image/png","image/webp","image/gif"];
 
   // One object URL per selected file, revoked when it changes or the component
   // goes away. Creating it inline in render leaks a blob handle per re-render.
@@ -149,7 +149,7 @@ export function FileUpload({ value, onChange, error, hint, maxBytes, acceptedTyp
         <input
           ref={inputRef}
           type="file"
-          accept={types.join(",")}
+          accept={(types || []).join(",")}
           className="cs-sr-only"
           onChange={(event) => handleFile(event.target.files?.[0])}
           disabled={disabled}

@@ -31,7 +31,7 @@ export function LogoMark({ className, ...props }) {
  *
  * The tagline sits after a middot, so it reads as a second clause of the name
  * rather than as a button. It was "verify what you forward", which described a
- * feature; it is now "Truth awareness. Vote informed.", which is the two things
+ * feature; it is now "Truth. Awareness. Vote Informed.", which is the two things
  * the product is actually for.
  */
 export function Logo({ compact = false, className, markClassName, textClassName, ...props }) {
@@ -43,7 +43,7 @@ export function Logo({ compact = false, className, markClassName, textClassName,
       </span>
       {!compact ? (
         <span className="hidden text-[0.8125rem] text-fg-muted xl:inline">
-          · Truth awareness. Vote informed.
+          · Truth. Awareness. Vote Informed.
         </span>
       ) : null}
     </span>

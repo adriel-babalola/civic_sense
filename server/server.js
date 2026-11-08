@@ -1,5 +1,4 @@
 import express from "express";
-import twilio from "twilio";
 import cors from "cors";
 import dotenv from "dotenv";
 import compression from "compression";
@@ -12,12 +11,13 @@ import {
   connectDB,
   saveFactCheck,
   getRecentFactChecks,
-  getLatestArticles,
   saveReport,
   getReports,
   updateReportStatus,
   isDbConnected,
   countArticles,
+  saveProfileSuggestion,
+  saveFeedback,
 } from "./services/db.js";
 import { startScraper, getScraperStats, syncOnce } from "./services/scraper.js";
 import { validateImageBuffer, bufferToDataUrl, imageFromUrl } from "./services/image.js";
@@ -37,15 +37,22 @@ import {
 } from "./services/metaWhatsapp.js";
 import { routeMessage } from "./services/messageRouter.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
+import adminRouter from "./routes/admin.js";
+import { requireAdmin } from "./middleware/adminAuth.js";
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(compression());
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json({
   limit: "10mb",
   verify: (req, res, buffer) => { req.rawBody = buffer; },
 }));
+
+// Track users who have sent their first message
+const firstMessageUsers = new Set();
+const promptStates = new Map();
 
 const MEDIA_MAX_MB = Number(process.env.MEDIA_MAX_MB) || 5;
 const upload = multer({
@@ -187,29 +194,6 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
-async function buildNightlyNewsDigest() {
-  let articles = await getLatestArticles(6);
-  if (articles.length === 0) {
-    console.log("[News] No articles in DB, triggering syncOnce()");
-    await syncOnce().catch((err) => console.error(`[News] syncOnce failed: ${err.message}`));
-    articles = await getLatestArticles(6);
-  }
-  const prompt = "\n\nWant any of these checked? Just send the claim.";
-  if (articles.length === 0) {
-    return `\ud83d\udcf0 No fresh news right now \u2014 the scraper hasn't synced yet. Try again in a few minutes.`;
-  }
-  const lines = articles.map((a, i) => {
-    const title = (a.title || "Untitled").trim();
-    const source = (a.source || "").trim();
-    const date = a.pubDate
-      ? new Date(a.pubDate).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-      : "";
-    const meta = [source, date].filter(Boolean).join(" \u2022 ");
-    return `${i + 1}. ${title}${meta ? `\n   ${meta}` : ""}${a.link ? `\n   ${a.link}` : ""}`;
-  });
-  return `\ud83d\udcf0 Nightly News Digest\n\n${lines.join("\n\n")}${prompt}`;
-}
-
 app.get("/webhook/meta", (req, res) => {
   const challenge = handleVerification(req);
   if (challenge === null) return res.status(403).send("Verification failed");
@@ -227,35 +211,21 @@ app.post("/webhook/meta", async (req, res) => {
   const message = extractMetaMessage(req.body);
   if (!message) return res.send("ok");
 
-  console.log(
-    `[Meta] Incoming from ${message.from}: "${message.text || ""}" image=${message.imageId ? "yes" : "no"}`
-  );
+  console.log(`[Meta] Incoming from ${message.from}: "${message.text || ""}" image=${message.imageId ? "yes" : "no"}`);
   res.send("ok");
 
-  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId) });
-
-  if (route.intent === "news") {
-    setImmediate(async () => {
-      try {
-        const digest = await buildNightlyNewsDigest();
-        await sendMetaTextMessage(message.from, digest);
-        console.log(`[Meta] News digest sent to ${message.from}`);
-      } catch (err) {
-        console.error("Meta news digest error:", err.message);
-      }
-    });
-    return;
-  }
-
+  const isFirst = !firstMessageUsers.has(message.from);
+  firstMessageUsers.add(message.from);
+  const context = promptStates.get(message.from) || {};
+  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), context });
   if (route.intent !== "fact-check") {
-    const combinedReply = route.reply;
-    console.log(`[Meta] Casual reply to=${message.from} intent=${route.intent} reply="${combinedReply ? combinedReply.substring(0, 80) : "EMPTY"}..."`);
-    return sendMetaTextMessage(message.from, combinedReply).catch((err) => {
-      const metaErr = err.response?.data || {};
-      console.error(`Casual Meta reply error: ${err.message} status=${err.response?.status}`);
-      console.error(`Casual Meta reply details:`, JSON.stringify(metaErr));
+    promptStates.set(message.from, { lastIntent: route.intent || route.router?.intent || "off_topic" });
+    const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+    return sendMetaTextMessage(message.from, reply).catch((err) => {
+      console.error("Meta reply error:", err.message);
     });
   }
+  promptStates.set(message.from, { lastIntent: "fact_checking" });
 
   setImmediate(async () => {
     try {
@@ -275,115 +245,14 @@ app.post("/webhook/meta", async (req, res) => {
         verdict: result.verdict,
         channel: "whatsapp",
         hashedFrom: message.from,
-        intent: route.intent,
-        searchQuery: route.searchQuery || null,
-        routerSource: route.router?.source || null,
         timestamp: new Date(),
       }).catch((err) => console.error("DB save error:", err.message));
-      await sendMetaTextMessage(message.from, `${result.verdict}\n\nSend me another claim anytime.`);
+      await sendMetaTextMessage(message.from, result.verdict);
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
       console.error("Meta webhook async error:", err);
       try {
-        await sendMetaTextMessage(
-          message.from,
-          "Sorry, I couldn't process that. Please try again with a text claim."
-        );
-      } catch (sendErr) {
-        console.error("Failed to send error reply:", sendErr.message);
-      }
-    }
-  });
-});
-
-app.post("/webhook", async (req, res) => {
-  const message = (req.body.Body || "").trim();
-  const from = req.body.From;
-  const to = req.body.To;
-  const numMedia = parseInt(req.body.NumMedia || "0", 10);
-  const mediaUrl = numMedia > 0 ? req.body.MediaUrl0 : null;
-
-  if (!message && !mediaUrl) {
-    return res.status(400).send("No message");
-  }
-
-  console.log(`Incoming from ${from}: "${message}" media=${numMedia}`);
-
-  // Immediately respond with empty TwiML to avoid Twilio's 15-second timeout.
-  // The actual fact-check result will be sent asynchronously via the REST API.
-  const twiml = new twilio.twiml.MessagingResponse();
-  res.type("text/xml");
-  res.status(200).send(twiml.toString());
-
-  const route = await routeMessage(message, { hasImage: Boolean(mediaUrl) });
-
-  if (route.intent === "news") {
-    setImmediate(async () => {
-      try {
-        const digest = await buildNightlyNewsDigest();
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({ from: to, to: from, body: digest });
-        console.log(`[WhatsApp] News digest sent to ${from}`);
-      } catch (err) {
-        console.error("WhatsApp news digest error:", err.message);
-      }
-    });
-    return;
-  }
-
-  if (route.intent !== "fact-check") {
-    setImmediate(async () => {
-      try {
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({ from: to, to: from, body: route.reply });
-        console.log(`[WhatsApp] Casual reply sent to ${from}`);
-      } catch (err) {
-        console.error("Casual reply error:", err.message);
-      }
-    });
-    return;
-  }
-
-  // Process fact-check asynchronously and send reply via Twilio REST API
-  setImmediate(async () => {
-    try {
-      let imageDataUrl = null;
-      if (mediaUrl) {
-        const remote = await imageFromUrl(mediaUrl);
-        if (remote) imageDataUrl = remote.dataUrl;
-      }
-
-      const result = await runFactCheck({ claim: message, imageDataUrl, caption: message, searchQuery: route.searchQuery });
-
-      await saveFactCheck({
-        claim: result.claim || message,
-        verdict: result.verdict,
-        channel: "whatsapp",
-        hashedFrom: from,
-        intent: route.intent,
-        searchQuery: route.searchQuery || null,
-        routerSource: route.router?.source || null,
-        timestamp: new Date(),
-      }).catch((err) => console.error("DB save error:", err.message));
-
-      // Send the verdict back via Twilio REST API
-      const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-      await twilioClient.messages.create({
-        from: to,   // The Twilio WhatsApp number that received the message
-        to: from,   // The user who sent the message
-        body: `${result.verdict}\n\nSend me another claim anytime.`,
-      });
-      console.log(`[WhatsApp] Reply sent to ${from}`);
-    } catch (err) {
-      console.error("Webhook async error:", err);
-      // Attempt to send error message back to user
-      try {
-        const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        await twilioClient.messages.create({
-          from: to,
-          to: from,
-          body: "Sorry, I couldn't process that. Please try again with a text claim.",
-        });
+        await sendMetaTextMessage(message.from, "I couldn't verify that right now. Please send the claim again with key details.");
       } catch (sendErr) {
         console.error("Failed to send error reply:", sendErr.message);
       }
@@ -395,36 +264,17 @@ app.post("/webhook/telegram", async (req, res) => {
   if (!verifyTelegramSecret(req.get("X-Telegram-Bot-Api-Secret-Token"))) {
     return res.status(401).send("Unauthorized");
   }
-
   const update = req.body;
   const message = extractMessage(update);
-  if (!message || !message.chatId) {
-    return res.send("ok");
-  }
-
-  console.log(`Telegram from ${message.chatId}: "${message.text}" fileId=${message.fileId || "none"}`);
-
+  if (!message || !message.chatId) return res.send("ok");
+  console.log(`Telegram from ${message.chatId}: "${message.text || ""}" fileId=${message.fileId || "none"}`);
   res.send("ok");
   if (!message.text && !message.fileId) return;
 
   try {
+    const isFirst = !firstMessageUsers.has(String(message.chatId));
+    firstMessageUsers.add(String(message.chatId));
     sendChatAction(message.chatId, "typing");
-
-    const route = await routeMessage(message.text, {
-      hasImage: Boolean(message.fileId),
-    });
-
-    if (route.intent === "news") {
-      const digest = await buildNightlyNewsDigest();
-      await sendMessage(message.chatId, digest);
-      console.log(`[Telegram] News digest sent to ${message.chatId}`);
-      return;
-    }
-
-    if (route.intent !== "fact-check") {
-      await sendMessage(message.chatId, route.reply);
-      return;
-    }
 
     let imageDataUrl = null;
     if (message.fileId) {
@@ -433,23 +283,28 @@ app.post("/webhook/telegram", async (req, res) => {
       if (remote) imageDataUrl = remote.dataUrl;
     }
 
-    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
+    const context = promptStates.get(String(message.chatId)) || {};
+    const route = await routeMessage(message.text, { hasImage: Boolean(imageDataUrl), context });
+    if (route.intent !== "fact-check") {
+      promptStates.set(String(message.chatId), { lastIntent: route.intent || route.router?.intent || "off_topic" });
+      const reply = isFirst ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+      return sendMessage(message.chatId, reply);
+    }
+    promptStates.set(String(message.chatId), { lastIntent: "fact_checking" });
 
+    const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
     await saveFactCheck({
       claim: result.claim || message.text,
       verdict: result.verdict,
       channel: "telegram",
       hashedFrom: String(message.chatId),
-      intent: route.intent,
-      searchQuery: route.searchQuery || null,
-      routerSource: route.router?.source || null,
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
 
-    await sendMessage(message.chatId, `${result.verdict}\n\nSend me another claim anytime.`);
+    await sendMessage(message.chatId, result.verdict);
   } catch (err) {
     console.error("Telegram webhook error:", err);
-    await sendMessage(message.chatId, "Sorry, I couldn't process that. Please try again with a text claim.");
+    try { await sendMessage(message.chatId, "I couldn't verify that right now. Please send the claim again."); } catch (_) {}
   }
 });
 
@@ -489,7 +344,57 @@ app.get("/api/reports", async (req, res) => {
   }
 });
 
-app.patch("/api/reports/:id/approve", async (req, res) => {
+// Admin API routes (mounted under /api/admin)
+app.use("/api/admin", adminRouter);
+
+// Public profile adjustment suggestion submission
+
+
+app.post("/api/feedback", async (req, res) => {
+  const { message, email, rating, page } = req.body || {};
+  if (!message || !String(message).trim()) {
+    return res.status(400).json({ success: false, error: "Feedback message is required" });
+  }
+  if (email && !/^\S+@\S+\.\S+$/.test(String(email))) {
+    return res.status(400).json({ success: false, error: "Email must be valid when provided" });
+  }
+  try {
+    const data = await saveFeedback({
+      message: String(message).trim().slice(0, 2000),
+      email: email ? String(email).trim().slice(0, 254) : "",
+      rating: rating ? Math.min(5, Math.max(1, Number(rating))) : null,
+      page: page ? String(page).slice(0, 200) : "",
+    });
+    if (!data) return res.status(503).json({ success: false, error: "Feedback storage unavailable" });
+    res.status(201).json({ success: true, data: { id: data._id } });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.post("/api/suggestions", async (req, res) => {
+  const { politicianSlug, politicianName, field, suggestedText, sourceUrl } = req.body || {};
+  if (!politicianSlug || !politicianName || !suggestedText || !sourceUrl) {
+    return res.status(400).json({
+      success: false,
+      error: "Missing required fields: politicianSlug, politicianName, suggestedText, sourceUrl",
+    });
+  }
+  try {
+    const suggestion = await saveProfileSuggestion({
+      politicianSlug,
+      politicianName,
+      field: field || "general",
+      suggestedText,
+      sourceUrl,
+    });
+    res.json({ success: true, data: suggestion });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.patch("/api/reports/:id/approve", requireAdmin, async (req, res) => {
   try {
     const report = await updateReportStatus(req.params.id, "approved");
     if (!report) return res.status(404).json({ success: false, error: "Report not found" });
@@ -499,7 +404,7 @@ app.patch("/api/reports/:id/approve", async (req, res) => {
   }
 });
 
-app.patch("/api/reports/:id/reject", async (req, res) => {
+app.patch("/api/reports/:id/reject", requireAdmin, async (req, res) => {
   try {
     const report = await updateReportStatus(req.params.id, "rejected");
     if (!report) return res.status(404).json({ success: false, error: "Report not found" });
