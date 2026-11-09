@@ -156,6 +156,34 @@ async function handleFactCheck(req, res) {
       return res.status(400).json({ success: false, error: "Provide a claim and/or an image" });
     }
 
+    // Hidden 5th skill guardrail: for text-only requests, pre-classify before
+    // expensive fact-check retrieval. Images imply a claim and go to fact-check.
+    if (!imageDataUrl && claim) {
+      const route = await routeMessage(claim, { hasImage: false });
+      if (route.intent !== "fact-check") {
+        return res.json({
+          success: true,
+          data: {
+            claim,
+            mode: route.intent,
+            reply: route.reply,
+            verdict: route.reply,
+            structured: { verdict: "CONVERSATION", confidence: 0, whatWeFound: route.reply, source: "CivicSense", sources: [] },
+            latencyMs: 0,
+          },
+        });
+      }
+      // use router's search query to improve retrieval
+      const result = await runFactCheck({ claim, imageDataUrl, caption, searchQuery: route.searchQuery || "" });
+      await saveFactCheck({
+        claim: result.claim || claim,
+        verdict: result.verdict,
+        channel: "api",
+        timestamp: new Date(),
+      }).catch((err) => console.error("DB save error:", err.message));
+      return res.json({ success: true, data: result });
+    }
+
     const result = await runFactCheck({ claim, imageDataUrl, caption });
 
     await saveFactCheck({
@@ -175,19 +203,23 @@ async function handleFactCheck(req, res) {
 app.post("/api/factcheck", upload.single("image"), handleFactCheck);
 
 app.post("/api/chat", async (req, res) => {
-  const { claim } = req.body;
-  if (!claim || !claim.trim()) {
+  const claim = String(req.body?.claim || "").trim();
+  if (!claim) {
     return res.status(400).json({ success: false, error: "No claim provided" });
   }
   try {
-    const result = await runFactCheck({ claim: claim.trim() });
+    const route = await routeMessage(claim, { hasImage: false });
+    if (route.intent !== "fact-check") {
+      return res.json({ success: true, data: { claim, mode: route.intent, reply: route.reply, verdict: route.reply } });
+    }
+    const result = await runFactCheck({ claim, searchQuery: route.searchQuery || "" });
     await saveFactCheck({
       claim,
       verdict: result.verdict,
       channel: "dashboard",
       timestamp: new Date(),
     }).catch((err) => console.error("DB save error:", err.message));
-    res.json({ success: true, data: { claim, verdict: result.verdict } });
+    res.json({ success: true, data: { claim, verdict: result.verdict, structured: result.structured } });
   } catch (err) {
     console.error("Chat error:", err);
     res.status(500).json({ success: false, error: err.message });

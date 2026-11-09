@@ -22,9 +22,15 @@ const DOMAINS = [
 ];
 
 export async function searchClaim(claim, extraQuery = "") {
+  if (!process.env.TAVILY_API_KEY) return "";
   try {
-    let query = String(extraQuery || claim || "").trim();
-    if (!query) query = String(claim || "").trim();
+    const base = String(claim || "").trim();
+    let query = String(extraQuery || base).trim();
+    if (!query) query = base;
+    // status questions benefit from recency cues; don't over-constrain
+    if (/\b(dead|alive|death|died|resign|arrest|appoint|elected|sack)\b/i.test(base) && !/\b(2026|2025|latest|today|recent)\b/i.test(query)) {
+      query = `${query} latest`;
+    }
     if (query && !/nigeria/i.test(query)) query = `${query} Nigeria`;
     const response = await axios.post(
       TAVILY_URL,
@@ -36,7 +42,7 @@ export async function searchClaim(claim, extraQuery = "") {
         max_results: 8,
         include_domains: DOMAINS,
       },
-      { timeout: 10000 }
+      { timeout: 9000 }
     );
 
     const data = response.data;
