@@ -248,19 +248,22 @@ app.post("/webhook/meta", async (req, res) => {
 
   const isFirst = !firstMessageUsers.has(message.from);
   firstMessageUsers.add(message.from);
-  const context = promptStates.get(message.from) || {};
-  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), context });
+  const state = promptStates.get(message.from) || { lastIntent: null, recent: [] };
+  const recent = Array.isArray(state.recent) ? state.recent.slice(-4) : [];
+  const route = await routeMessage(message.text, { hasImage: Boolean(message.imageId), context: { lastIntent: state.lastIntent, recent } });
+  const nextRecent = [...recent, { role: "user", text: String(message.text || "").slice(0, 240) }].slice(-6);
   if (route.intent !== "fact-check") {
-    promptStates.set(message.from, { lastIntent: route.intent || route.router?.intent || "off_topic" });
+    nextRecent.push({ role: "assistant", text: String(route.reply || "").slice(0, 240) });
+    promptStates.set(message.from, { lastIntent: route.intent, recent: nextRecent });
     let reply = route.reply;
-    if (route.intent !== "off_topic" && isFirst && !/^(welcome|hello|hi|hey)/i.test(reply)) {
+    if (route.intent === "chat" && isFirst && !/\b(civicsense|hello|hi|hey|welcome)\b/i.test(reply)) {
       reply = `Welcome to CivicSense. ${reply}`;
     }
     return sendMetaTextMessage(message.from, reply).catch((err) => {
       console.error("Meta reply error:", err.message);
     });
   }
-  promptStates.set(message.from, { lastIntent: "fact_checking" });
+  promptStates.set(message.from, { lastIntent: "fact_checking", recent: nextRecent });
 
   setImmediate(async () => {
     try {
@@ -318,17 +321,17 @@ app.post("/webhook/telegram", async (req, res) => {
       if (remote) imageDataUrl = remote.dataUrl;
     }
 
-    const context = promptStates.get(String(message.chatId)) || {};
-    const route = await routeMessage(message.text, { hasImage: Boolean(imageDataUrl), context });
+    const state = promptStates.get(String(message.chatId)) || { lastIntent: null, recent: [] };
+    const recent = Array.isArray(state.recent) ? state.recent.slice(-4) : [];
+    const route = await routeMessage(message.text, { hasImage: Boolean(imageDataUrl), context: { lastIntent: state.lastIntent, recent } });
+    const nextRecent = [...recent, { role: "user", text: String(message.text || "").slice(0, 240) }].slice(-6);
     if (route.intent !== "fact-check") {
-      promptStates.set(String(message.chatId), { lastIntent: route.intent || route.router?.intent || "off_topic" });
-      let reply = route.reply;
-    if (route.intent !== "off_topic" && isFirst && !/^(welcome|hello|hi|hey)/i.test(reply)) {
-      reply = `Welcome to CivicSense. ${reply}`;
-    }
+      nextRecent.push({ role: "assistant", text: String(route.reply || "").slice(0, 240) });
+      promptStates.set(String(message.chatId), { lastIntent: route.intent, recent: nextRecent });
+      const reply = route.intent === "chat" && isFirst && !/\b(civicsense|hello|hi|hey|welcome)\b/i.test(route.reply) ? `Welcome to CivicSense. ${route.reply}` : route.reply;
       return sendMessage(message.chatId, reply);
     }
-    promptStates.set(String(message.chatId), { lastIntent: "fact_checking" });
+    promptStates.set(String(message.chatId), { lastIntent: "fact_checking", recent: nextRecent });
 
     const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
     await saveFactCheck({
