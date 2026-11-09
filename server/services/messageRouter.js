@@ -41,7 +41,9 @@ export async function routeMessage(text, { hasImage = false, context = {} } = {}
     return { intent: "fact-check", searchQuery: routed.search_query || String(text).trim(), router: routed };
   }
   if (routed?.intent === "redirect") {
-    return { intent: "redirect", reply: oneSentence(routed.reply) || REDIRECT_REPLY, router: routed };
+    const base = oneSentence(routed.reply) || REDIRECT_REPLY;
+    const reply = /another llm|other llm/i.test(base) ? base : REDIRECT_REPLY;
+    return { intent: "redirect", reply, router: routed };
   }
   if (routed?.intent === "civic_info") {
     if (routed.search_query) {
