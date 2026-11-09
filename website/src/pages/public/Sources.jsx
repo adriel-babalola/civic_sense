@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { Rss } from "lucide-react";
-import { SOURCES, SAMPLE_NOTICE } from "../../data/demo-data";
+import { SOURCES } from "../../data/demo-data";
 import { SOURCE_LOGOS } from "../../data/content";
 import { Container, PageHeader, EmptyState } from "../../components/shared/Layout";
 import { SearchInput } from "../../components/shared/Input";
 import { CopyButton } from "../../components/shared/FileUpload";
 import { Badge } from "../../components/shared/Badge";
 import { Button } from "../../components/shared/Button";
-import { SampleBanner } from "../../components/shared/SampleBanner";
 import { getLogo } from "../../utils/formatters";
 
 /**
@@ -49,11 +48,6 @@ export function Sources() {
           </Button>
         }
       />
-
-      <SampleBanner className="mt-5">
-        {SAMPLE_NOTICE} The newsroom registry below is the real one CivicSense is built to
-        read from.
-      </SampleBanner>
 
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <SearchInput

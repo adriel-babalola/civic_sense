@@ -134,29 +134,32 @@ export function Politicians() {
             "sticky top-20 md:static md:bg-surface md:backdrop-blur-none",
           )}
         >
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto]">
+          <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_auto]">
             <SearchInput
+              className="min-w-0 w-full"
               value={query}
               onChange={setQuery}
               placeholder="Search by name, party or running mate"
             />
 
-            <SegmentedControl
-              label="Filter by role"
-              size="sm"
-              value={role}
-              onChange={setRole}
-              options={[
-                { value: ALL, label: "All", count: results.length },
-                ...ROLE_OPTIONS.map((option) => ({
-                  value: option.key,
-                  label: option.label,
-                  count: roleTotals[option.key],
-                })),
-              ]}
-            />
+            <div className="min-w-0">
+              <SegmentedControl
+                label="Filter by role"
+                size="sm"
+                value={role}
+                onChange={setRole}
+                options={[
+                  { value: ALL, label: "All", count: results.length },
+                  ...ROLE_OPTIONS.map((option) => ({
+                    value: option.key,
+                    label: option.label,
+                    count: roleTotals[option.key],
+                  })),
+                ]}
+              />
+            </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               {/* Wrapped rather than given a className: <Select> drops
                   wrapperClassName when it has no label, so the flex sizing has to
                   live on an element in this file. */}

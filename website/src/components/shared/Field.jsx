@@ -29,12 +29,14 @@ export function Field({ label, hint, error, required = false, htmlFor, className
         </label>
       ) : null}
 
-      {children({
-        id,
-        "aria-describedby": [errorId, hintId].filter(Boolean).join(" ") || undefined,
-        "aria-invalid": error ? true : undefined,
-        "aria-required": required || undefined,
-      })}
+      {typeof children === "function"
+        ? children({
+            id,
+            "aria-describedby": [errorId, hintId].filter(Boolean).join(" ") || undefined,
+            "aria-invalid": error ? true : undefined,
+            "aria-required": required || undefined,
+          })
+        : children}
 
       {error ? (
         <p id={errorId} className="cs-error-text flex items-start gap-1.5">

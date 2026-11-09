@@ -9,12 +9,17 @@ export const CONFIG = {
   WHATSAPP_MESSAGE: "Hi CivicSense",
   WHATSAPP_LINK: `https://wa.me/${(env.VITE_WHATSAPP_NUMBER || "").replace(/\D/g, "")}?text=${encodeURIComponent("Hi CivicSense")}`,
   API_BASE_URL: (env.VITE_API_URL || "https://civic-sense-8d2m.onrender.com").replace(/\/+$/, ""),
-  CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "hello@civicsense.ng",
-  PRIVACY_EMAIL: "civicsense.verify@gmail.com",
+  CONTACT_EMAIL: env.VITE_CONTACT_EMAIL || "civicsense.ng@gmail.com",
+  PRIVACY_EMAIL: env.VITE_PRIVACY_EMAIL || "civicsense.ng@gmail.com",
   GITHUB_URL: env.VITE_GITHUB_URL || "https://github.com/adriel-babalola/civic_sense",
   MAX_UPLOAD_BYTES: 5 * 1024 * 1024,
   MAX_UPLOAD_MB: 5,
   ACCEPTED_IMAGE_TYPES: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  // Client-side courtesy throttle for anonymous incident reports.
+  REPORT_LIMIT: {
+    max: Number(env.VITE_REPORT_LIMIT_MAX || 8),
+    windowMs: Number(env.VITE_REPORT_LIMIT_WINDOW_MS || 60 * 60 * 1000),
+  },
   WHATSAPP: {
     e164: env.VITE_WHATSAPP_NUMBER || "",
     display: env.VITE_WHATSAPP_NUMBER || "",

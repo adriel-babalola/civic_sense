@@ -739,6 +739,177 @@ export const PHOTO_PACK = [
     "author": null,
     "rosterId": "adebayo-adewale-ebenezer"
   },
+  {
+    "order": 107,
+    "folder": "research-new-photos",
+    "packName": "Aliyu Abbas-Bin",
+    "asset": "pack-aliyu-abbas-bin",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "aliyu-abbas-bin"
+  },
+  {
+    "order": 108,
+    "folder": "research-new-photos",
+    "packName": "Atiku Abubakar (new)",
+    "asset": "pack-atiku-new",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "270x270",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "atiku-abubakar"
+  },
+  {
+    "order": 109,
+    "folder": "research-new-photos",
+    "packName": "Peter Gregory Obi (new)",
+    "asset": "pack-peter-obi-new",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "peter-gregory-obi"
+  },
+  {
+    "order": 110,
+    "folder": "research-new-photos",
+    "packName": "Donald Duke",
+    "asset": "pack-donald-duke",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "donald-duke"
+  },
+  {
+    "order": 111,
+    "folder": "research-new-photos",
+    "packName": "Omoyele Sowore",
+    "asset": "pack-omoyele-sowore",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "omoyele-sowore"
+  },
+  {
+    "order": 112,
+    "folder": "research-new-photos",
+    "packName": "Rufai Adekunle Omo-Aje",
+    "asset": "pack-rufai-adekunle-omoaje",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "rufai-adekunle-omo-aje"
+  },
+  {
+    "order": 113,
+    "folder": "research-new-photos",
+    "packName": "Adenuga Sunday",
+    "asset": "pack-adenuga-sunday",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "338x338",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "adenuga-sunday"
+  },
+  {
+    "order": 114,
+    "folder": "research-new-photos",
+    "packName": "Sunday Chibuzo Okereke",
+    "asset": "pack-sunday-chibuzo-okereke",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "sunday-chibuzo-okereke"
+  },
+  {
+    "order": 115,
+    "folder": "research-new-photos",
+    "packName": "Daniel Daberechukwu Nwanyanwu",
+    "asset": "pack-nwanyanwu-daniel",
+    "usable": true,
+    "unusableReason": null,
+    "lowResolution": false,
+    "outputSize": "512x512",
+    "source": "https://www.inecnigeria.org/",
+    "rights": "From research/new photos; rights not independently verified.",
+    "rightsStatus": "unverified",
+    "licence": null,
+    "licenceUrl": null,
+    "onCommons": false,
+    "sourceIsStable": true,
+    "author": null,
+    "rosterId": "daniel-daberechukwu-nwanyanwu"
+  },
 ];
 
 /**
@@ -1271,6 +1442,42 @@ export const PACK_PHOTO_CREDITS = Object.fromEntries([
       "packFolder": "research-new-photos",
       "unverified": true
     }
+  ],
+  [
+    "pack-aliyu-abbas-bin",
+    { "file": "pack-aliyu-abbas-bin", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Aliyu Abbas-Bin", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-atiku-new",
+    { "file": "pack-atiku-new", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Atiku Abubakar", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-peter-obi-new",
+    { "file": "pack-peter-obi-new", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Peter Obi", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-donald-duke",
+    { "file": "pack-donald-duke", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Donald Duke", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-omoyele-sowore",
+    { "file": "pack-omoyele-sowore", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Omoyele Sowore", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-rufai-adekunle-omoaje",
+    { "file": "pack-rufai-adekunle-omoaje", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Rufai Adekunle Omo-Aje", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-adenuga-sunday",
+    { "file": "pack-adenuga-sunday", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Adenuga Sunday", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-sunday-chibuzo-okereke",
+    { "file": "pack-sunday-chibuzo-okereke", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Sunday Chibuzo Okereke", "taken": null, "packFolder": "research-new-photos", "unverified": true }
+  ],
+  [
+    "pack-nwanyanwu-daniel",
+    { "file": "pack-nwanyanwu-daniel", "author": "Unknown", "license": "Licence not verified", "licenseUrl": null, "source": "https://www.inecnigeria.org/", "sourceLabel": "INEC", "title": "Daniel Daberechukwu Nwanyanwu", "taken": null, "packFolder": "research-new-photos", "unverified": true }
   ],
 ]);
 

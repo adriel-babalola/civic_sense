@@ -166,7 +166,7 @@ export function SegmentedControl({ label, value, onChange, options, className, s
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "inline-flex w-full rounded-control border border-line bg-surface p-0.5",
+        "inline-flex w-full min-w-0 rounded-control border border-line bg-surface p-0.5",
         className,
       )}
     >

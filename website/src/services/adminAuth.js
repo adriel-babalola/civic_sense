@@ -8,6 +8,10 @@
 const TOKEN_KEY = "cs_admin_token";
 const USER_KEY = "cs_admin_user";
 
+import CONFIG from "../config/config";
+
+const apiUrl = (path) => `${CONFIG.API_BASE_URL}${path}`;
+
 /** Retrieve currently stored admin JWT token. */
 export function getAdminToken() {
   try {
@@ -69,7 +73,7 @@ export function getAuthHeader() {
  */
 export async function loginAdmin(email, password) {
   try {
-    const response = await fetch("/api/admin/auth/login", {
+    const response = await fetch(apiUrl("/api/admin/auth/login"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -129,7 +133,7 @@ export async function verifyAdminSession() {
   if (!token) return { valid: false };
 
   try {
-    const response = await fetch("/api/admin/auth/me", {
+    const response = await fetch(apiUrl("/api/admin/auth/me"), {
       headers: getAuthHeader(),
     });
 
@@ -151,7 +155,7 @@ export async function verifyAdminSession() {
  */
 export async function logoutAdmin() {
   try {
-    await fetch("/api/admin/auth/logout", {
+    await fetch(apiUrl("/api/admin/auth/logout"), {
       method: "POST",
       headers: getAuthHeader(),
     });

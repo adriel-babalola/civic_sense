@@ -8,8 +8,9 @@
  */
 
 import { getAuthHeader } from "./adminAuth";
+import CONFIG from "../config/config";
 
-/** Helper to execute an authenticated fetch request */
+/** Helper to execute an authenticated fetch request against the API host. */
 async function adminFetch(endpoint, options = {}) {
   const headers = {
     "Content-Type": "application/json",
@@ -17,7 +18,8 @@ async function adminFetch(endpoint, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(endpoint, {
+  const url = endpoint.startsWith("http") ? endpoint : `${CONFIG.API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
     ...options,
     headers,
   });
