@@ -33,11 +33,11 @@ export function ElectionCalendar() {
   const [emailState, setEmailState] = useState({ status: "idle", message: "" });
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Target: Presidential Election Day 2027-02-20
+  // Target: Presidential Election Day 2027-01-16
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
   useEffect(() => {
-    const targetDate = new Date("2027-02-20T08:30:00+01:00").getTime();
+    const targetDate = new Date("2027-01-16T08:30:00+01:00").getTime();
 
     const updateTimer = () => {
       const now = new Date().getTime();
@@ -131,7 +131,7 @@ export function ElectionCalendar() {
                 Presidential & National Assembly Election Day
               </h2>
               <p className="mt-1 text-sm text-neutral-400 max-w-xl">
-                Saturday, February 20, 2027 &bull; Polling opens 8:30 AM to 2:30 PM WAT across all 176,846 polling units nationwide.
+                Saturday, January 16, 2027 &bull; Polling opens 8:30 AM to 2:30 PM WAT across all polling units nationwide.
               </p>
             </div>
 
