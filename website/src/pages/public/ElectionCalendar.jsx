@@ -21,6 +21,7 @@ import {
   CALENDAR_CATEGORIES,
   getWebcalUrl,
   getIcsDownloadUrl,
+  getGoogleCalendarFeedUrl,
   getGoogleCalendarUrl,
 } from "../../data/electionCalendar2027";
 import { CONFIG } from "../../config/config";
@@ -86,7 +87,7 @@ export function ElectionCalendar() {
 
       setEmailState({
         status: "success",
-        message: "Email sent! Check your inbox. If on an iPhone, tap the attached .ics to add all dates in one click.",
+        message: "Email sent! Check your inbox. Tap the attached .ics file to add all dates to your calendar in one tap.",
       });
       setEmailInput("");
     } catch (err) {
@@ -101,7 +102,7 @@ export function ElectionCalendar() {
     if (navigator.share) {
       navigator.share({
         title: "2027 Nigeria Election Calendar",
-        text: "Download and sync all verified 2027 Nigeria Election milestones to your iPhone, Google Calendar, or PC.",
+        text: "Download and sync all verified 2027 Nigeria Election milestones to your phone, Google Calendar, or Apple Calendar.",
         url: window.location.href,
       }).catch(() => {});
     } else {
@@ -117,7 +118,7 @@ export function ElectionCalendar() {
         <PageHeader
           eyebrow="Nigeria 2027 General Elections"
           title="Official Election Calendar & Timetable"
-          description="Statutory deadlines, voter registration cutoffs, and polling dates derived from the 1999 Constitution and Electoral Act 2022. Sync directly to your iPhone, Android, or desktop calendar."
+          description="Statutory deadlines, voter registration cutoffs, and polling dates derived from the 1999 Constitution and Electoral Act. Sync directly to your phone, Google Calendar, Apple Calendar, or desktop."
         />
 
         {/* Countdown Hero Banner */}
@@ -160,7 +161,16 @@ export function ElectionCalendar() {
               href={getWebcalUrl()}
               className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all"
             >
-              <Smartphone className="h-4 w-4" /> Add to iPhone / Apple Calendar
+              <CalendarIcon className="h-4 w-4" /> Add to Apple Calendar
+            </a>
+
+            <a
+              href={getGoogleCalendarFeedUrl()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition-all"
+            >
+              <ExternalLink className="h-4 w-4 text-emerald-400" /> Add to Google Calendar
             </a>
 
             <a
@@ -305,7 +315,7 @@ export function ElectionCalendar() {
               </div>
               <div>
                 <h3 className="text-lg font-bold text-white">Get 2027 Calendar by Email</h3>
-                <p className="text-xs text-neutral-400">Includes .ics file & native iPhone calendar links</p>
+                <p className="text-xs text-neutral-400">Includes universal .ics file & 1-tap calendar sync</p>
               </div>
             </div>
 
@@ -331,7 +341,7 @@ export function ElectionCalendar() {
             ) : (
               <form onSubmit={handleEmailSubscribe} className="space-y-4">
                 <p className="text-xs text-neutral-300 leading-relaxed">
-                  Enter your email to receive the complete 2027 Nigeria Election Calendar. Open the email on your iPhone or computer to add all 10 dates with 1 tap.
+                  Enter your email to receive the complete 2027 Nigeria Election Calendar. Open the email on your phone or computer to add all 12 dates with 1 tap.
                 </p>
 
                 <div>

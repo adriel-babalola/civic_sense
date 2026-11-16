@@ -57,7 +57,14 @@ function buildCalendarEmailHtml({ siteUrl, calendarUrl, webcalUrl }) {
                 <tr>
                   <td style="padding-bottom: 10px;">
                     <a href="${webcalUrl}" style="display: block; text-align: center; background-color: #008751; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-size: 14px;">
-                      🍏 Add to Apple Calendar (iPhone / Mac)
+                      🍏 Add to Apple Calendar
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding-bottom: 10px;">
+                    <a href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(calendarUrl)}" style="display: block; text-align: center; background-color: #1e3a8a; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-size: 14px; border: 1px solid #2563eb;">
+                      📅 Add to Google Calendar
                     </a>
                   </td>
                 </tr>
@@ -70,7 +77,7 @@ function buildCalendarEmailHtml({ siteUrl, calendarUrl, webcalUrl }) {
                 </tr>
               </table>
               <div style="font-size: 11px; color: #737373; margin-top: 10px; line-height: 1.4;">
-                💡 <em>Tip for iPhone users: You can also tap the <strong>nigeria-2027-elections.ics</strong> file attached to this email to add all 10 dates directly to your phone's Calendar!</em>
+                💡 <em>Tip: You can also tap the <strong>nigeria-2027-elections.ics</strong> file attached to this email to add all 12 dates directly to your phone's Calendar!</em>
               </div>
             </td>
           </tr>
@@ -148,7 +155,7 @@ export async function sendCalendarEmail(toEmail) {
     const payload = {
       from: fromEmail.includes("@resend.dev") ? fromEmail : (process.env.RESEND_FROM || "CivicSense <onboarding@resend.dev>"),
       to: [cleanEmail],
-      subject: "🇳🇬 Your 2027 Nigeria Election Calendar (.ics & iPhone Format)",
+      subject: "🇳🇬 Your 2027 Nigeria Election Calendar (Apple, Google & .ics)",
       html,
       attachments: [
         {

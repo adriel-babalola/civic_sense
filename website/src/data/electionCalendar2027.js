@@ -191,6 +191,15 @@ export function getIcsDownloadUrl() {
 }
 
 /**
+ * Generate a 1-click Google Calendar subscription link for the full 2027 calendar (Android / Web).
+ */
+export function getGoogleCalendarFeedUrl() {
+  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
+  const icsUrl = `${base}/api/calendar/2027.ics`;
+  return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icsUrl)}`;
+}
+
+/**
  * Generate a 1-click Google Calendar URL for a specific event.
  */
 export function getGoogleCalendarUrl(event) {
