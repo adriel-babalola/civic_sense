@@ -17,6 +17,7 @@ import { Privacy } from "./pages/public/Privacy";
 import { DataDeletion } from "./pages/public/DataDeletion";
 import { Credits } from "./pages/public/Credits";
 import { NotFound } from "./pages/NotFound";
+import { ElectionCalendar } from "./pages/public/ElectionCalendar";
 import { FeatureGate } from "./components/shared/FeatureGate";
 
 /** Wraps a surface in its feature switch, so a disabled route stops existing. */
@@ -118,6 +119,7 @@ export const router = createBrowserRouter([
         path: "/politicians/:slug/suggest",
         element: gated("politicians", <SuggestUpdate />),
       },
+      { path: "/calendar", element: gated("electionsCalendar", <ElectionCalendar />) },
       { path: "/map", element: gated("incidentMap", <MapPage />) },
       { path: "/report", element: gated("reports", <Report />) },
       { path: "/live", element: gated("liveFeed", <LiveFeed />) },

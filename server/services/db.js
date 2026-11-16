@@ -141,7 +141,6 @@ profileSuggestionSchema.index({ status: 1, createdAt: -1 });
 
 const ProfileSuggestion = mongoose.model("ProfileSuggestion", profileSuggestionSchema);
 
-
 const feedbackSchema = new mongoose.Schema({
   message: { type: String, required: true, trim: true },
   email: { type: String, trim: true, default: "" },
@@ -152,6 +151,24 @@ const feedbackSchema = new mongoose.Schema({
 }, { autoIndex: true });
 feedbackSchema.index({ timestamp: -1 });
 const Feedback = mongoose.model("Feedback", feedbackSchema);
+
+const calendarSubscriberSchema = new mongoose.Schema(
+  {
+    email: {
+      type: String,
+      required: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    format: { type: String, default: "ics_email" },
+    source: { type: String, default: "web_calendar" },
+    sentCount: { type: Number, default: 1 },
+    lastSentAt: { type: Date, default: Date.now },
+  },
+  { timestamps: true, autoIndex: true }
+);
+const CalendarSubscriber = mongoose.model("CalendarSubscriber", calendarSubscriberSchema);
 
 export async function connectDB() {
   if (mongoose.connection.readyState === 0) {
@@ -173,6 +190,7 @@ export async function connectDB() {
       Report.init(),
       AdminUser.init(),
       ProfileSuggestion.init(),
+      CalendarSubscriber.init(),
     ]);
     console.log("[DB] MongoDB connected");
   }
@@ -552,9 +570,7 @@ export async function getAdminStats(scraperStats = null) {
   }
 }
 
-export { Article, Report, FactCheck, AdminUser, ProfileSuggestion };
-
-
+export { Article, Report, FactCheck, AdminUser, ProfileSuggestion, CalendarSubscriber };
 
 export async function saveFeedback({ message, email, rating, page }) {
   if (!isDbConnected()) return null;
@@ -577,4 +593,24 @@ export async function updateFeedbackStatus(id, status) {
   if (!isDbConnected()) return null;
   if (!mongoose.Types.ObjectId.isValid(id)) return null;
   return Feedback.findByIdAndUpdate(id, { status }, { new: true }).lean();
+}
+
+export async function saveCalendarSubscriber({ email, format = "ics_email", source = "web_calendar" }) {
+  await connectDB();
+  if (!isDbConnected()) return null;
+  const cleanEmail = String(email || "").toLowerCase().trim();
+  return CalendarSubscriber.findOneAndUpdate(
+    { email: cleanEmail },
+    {
+      $set: { format, source, lastSentAt: new Date() },
+      $inc: { sentCount: 1 },
+    },
+    { upsert: true, new: true }
+  );
+}
+
+export async function getCalendarSubscribersCount() {
+  await connectDB();
+  if (!isDbConnected()) return 0;
+  return CalendarSubscriber.countDocuments();
 }

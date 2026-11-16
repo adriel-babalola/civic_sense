@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import {
   Activity,
+  Calendar,
   ChevronDown,
   HelpCircle,
   Map,
@@ -39,6 +40,7 @@ const NAV = [
     label: "Civic data",
     icon: Activity,
     children: [
+      { to: "/calendar", label: "2027 Calendar", description: "Election milestones", icon: Calendar, flag: FEATURES.electionsCalendar },
       { to: "/live", label: "Live feed", description: "Recent checks", icon: Activity, flag: FEATURES.liveFeed },
       { to: "/map", label: "Incident map", description: "Reports by state", icon: Map, flag: FEATURES.incidentMap },
     ],
