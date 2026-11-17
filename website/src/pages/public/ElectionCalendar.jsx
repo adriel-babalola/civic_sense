@@ -35,7 +35,7 @@ export function ElectionCalendar() {
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Target: Presidential & National Assembly Election Day 2027-01-16 08:30:00 WAT
-  const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
+  const [countdown, setCountdown] = useState({ days: 0 });
 
   useEffect(() => {
     const targetDate = new Date("2027-01-16T08:30:00+01:00").getTime();
@@ -47,17 +47,14 @@ export function ElectionCalendar() {
       if (difference > 0) {
         setCountdown({
           days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          mins: Math.floor((difference / 1000 / 60) % 60),
-          secs: Math.floor((difference / 1000) % 60),
         });
       } else {
-        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
+        setCountdown({ days: 0 });
       }
     };
 
     updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    const interval = setInterval(updateTimer, 60000);
     return () => clearInterval(interval);
   }, []);
 
@@ -156,21 +153,18 @@ export function ElectionCalendar() {
           {/* Hairline Divider */}
           <div className="my-6 border-b border-line" />
 
-          {/* Countdown & Verdict Display */}
+          {/* Countdown & Metric Display */}
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <p className="cs-eyebrow text-fg-muted mb-2">
                 Countdown to Polling Day
               </p>
               <div className="flex items-baseline gap-3">
-                <span className="text-4xl sm:text-6xl font-extrabold tracking-tight text-brand-bright font-mono">
+                <span className="text-5xl sm:text-7xl font-extrabold tracking-tight text-brand-bright font-mono">
                   {countdown.days}
                 </span>
-                <span className="text-base sm:text-lg font-bold uppercase tracking-wider text-fg">
+                <span className="text-base sm:text-xl font-bold uppercase tracking-wider text-fg">
                   Days Remaining
-                </span>
-                <span className="text-xs sm:text-sm font-mono text-fg-muted">
-                  ({String(countdown.hours).padStart(2, "0")}h {String(countdown.mins).padStart(2, "0")}m {String(countdown.secs).padStart(2, "0")}s)
                 </span>
               </div>
             </div>
