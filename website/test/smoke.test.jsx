@@ -8,6 +8,7 @@ import { FactCheck } from "../src/pages/public/FactCheck";
 import { Politicians } from "../src/pages/public/Politicians";
 import { PoliticianDetail } from "../src/pages/public/PoliticianDetail";
 import { MapPage } from "../src/pages/public/MapPage";
+import { ElectionCalendar } from "../src/pages/public/ElectionCalendar";
 import { Report } from "../src/pages/public/Report";
 import { LiveFeed } from "../src/pages/public/LiveFeed";
 import { Sources } from "../src/pages/public/Sources";
@@ -38,6 +39,10 @@ import {
 import { INEC_SOURCE } from "../src/data/elections2027";
 import { FAQS } from "../src/data/faq";
 import { STATES } from "../src/data/states";
+import {
+  ELECTION_CALENDAR_2027,
+  getGoogleCalendarUrl,
+} from "../src/data/electionCalendar2027";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
@@ -1223,6 +1228,53 @@ describe("fact-check workspace", () => {
 /* ========================================================================== */
 /* Global chrome                                                              */
 /* ========================================================================== */
+
+/* ========================================================================== */
+/* Election calendar                                                          */
+/* ========================================================================== */
+
+describe("election calendar", () => {
+  it("renders the milestones and filters by category", async () => {
+    const user = userEvent.setup();
+    renderRoute(<ElectionCalendar />, { route: "/calendar" });
+
+    expect(screen.getByRole("heading", { name: /election calendar/i })).toBeInTheDocument();
+
+    // Every event title is present under "All milestones".
+    for (const event of ELECTION_CALENDAR_2027) {
+      expect(screen.getByRole("heading", { name: event.title })).toBeInTheDocument();
+    }
+
+    // Filtering to polling days drops a campaign-only milestone.
+    await user.click(screen.getByRole("button", { name: /polling days/i }));
+    expect(screen.getByRole("heading", { name: /governorship & state houses/i })).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: /official campaign period begins \(presidential/i }),
+    ).not.toBeInTheDocument();
+
+    // The run-off chip exists, so contingency events are reachable too.
+    await user.click(screen.getByRole("button", { name: /run-off/i }));
+    expect(screen.getByRole("heading", { name: /presidential run-off window/i })).toBeInTheDocument();
+  });
+
+  it("builds a valid add-to-Google link for every event", () => {
+    for (const event of ELECTION_CALENDAR_2027) {
+      const url = new URL(getGoogleCalendarUrl(event));
+      const dates = url.searchParams.get("dates");
+      expect(url.searchParams.get("action")).toBe("TEMPLATE");
+      expect(dates).toBeTruthy();
+
+      if (event.timeStart) {
+        // Timed event: both sides carry a time.
+        expect(dates).toMatch(/^\d{8}T\d{6}\/\d{8}T\d{6}$/);
+      } else {
+        // All-day event: DTEND is exclusive, so the end must be after the start.
+        const [start, end] = dates.split("/");
+        expect(Number(end)).toBeGreaterThan(Number(start));
+      }
+    }
+  });
+});
 
 describe("global chrome", () => {
   it("ships the required title and a favicon link", () => {

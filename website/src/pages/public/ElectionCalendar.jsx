@@ -3,7 +3,6 @@ import {
   Calendar as CalendarIcon,
   Download,
   Mail,
-  Smartphone,
   CheckCircle2,
   AlertCircle,
   ExternalLink,
@@ -13,7 +12,7 @@ import {
   X,
   Share2,
 } from "lucide-react";
-import { Container, PageHeader, Section } from "../../components/shared/Layout";
+import { Container, PageHeader } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Badge } from "../../components/shared/Badge";
 import {
@@ -27,73 +26,82 @@ import {
 import { CONFIG } from "../../config/config";
 import { cn } from "../../utils/cn";
 
+/** Polling day for the 2027 presidential election. */
+const TARGET_MS = new Date("2027-01-16T08:30:00+01:00").getTime();
+
+function CountdownUnit({ value, label, accent = false }) {
+  return (
+    <div className="flex min-w-[58px] flex-col items-center rounded-control border border-line bg-surface px-3 py-2 sm:min-w-[68px]">
+      <span
+        className={cn(
+          "font-mono text-xl font-semibold tabular-nums sm:text-2xl",
+          accent ? "text-brand-bright" : "text-fg",
+        )}
+      >
+        {value}
+      </span>
+      <span className="text-2xs uppercase tracking-[0.08em] text-fg-faint">{label}</span>
+    </div>
+  );
+}
+
 export function ElectionCalendar() {
   const [activeCategory, setActiveCategory] = useState("all");
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emailState, setEmailState] = useState({ status: "idle", message: "" });
   const [copiedLink, setCopiedLink] = useState(false);
-
-  // Target: Presidential Election Day 2027-01-16
   const [countdown, setCountdown] = useState({ days: 0, hours: 0, mins: 0, secs: 0 });
 
   useEffect(() => {
-    const targetDate = new Date("2027-01-16T08:30:00+01:00").getTime();
-
-    const updateTimer = () => {
-      const now = new Date().getTime();
-      const difference = targetDate - now;
-
-      if (difference > 0) {
-        setCountdown({
-          days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-          hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-          mins: Math.floor((difference / 1000 / 60) % 60),
-          secs: Math.floor((difference / 1000) % 60),
-        });
+    const update = () => {
+      const difference = TARGET_MS - Date.now();
+      if (difference <= 0) {
+        setCountdown({ days: 0, hours: 0, mins: 0, secs: 0 });
+        return;
       }
+      setCountdown({
+        days: Math.floor(difference / 86400000),
+        hours: Math.floor((difference / 3600000) % 24),
+        mins: Math.floor((difference / 60000) % 60),
+        secs: Math.floor((difference / 1000) % 60),
+      });
     };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
+    update();
+    const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  const filteredEvents = ELECTION_CALENDAR_2027.filter((e) => {
-    if (activeCategory === "all") return true;
-    return e.category === activeCategory;
-  });
+  const filteredEvents =
+    activeCategory === "all"
+      ? ELECTION_CALENDAR_2027
+      : ELECTION_CALENDAR_2027.filter((event) => event.category === activeCategory);
 
-  const handleEmailSubscribe = async (e) => {
-    e.preventDefault();
+  const handleEmailSubscribe = async (event) => {
+    event.preventDefault();
     if (!emailInput || !/^\S+@\S+\.\S+$/.test(emailInput.trim())) {
       setEmailState({ status: "error", message: "Please enter a valid email address." });
       return;
     }
 
-    setEmailState({ status: "loading", message: "Sending calendar to your inbox..." });
-
+    setEmailState({ status: "loading", message: "Sending the calendar to your inbox..." });
     try {
       const res = await fetch(`${CONFIG.API_BASE_URL}/api/calendar/subscribe`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: emailInput.trim(), format: "ics_email", source: "web_calendar_modal" }),
       });
-
       const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || "Failed to deliver calendar.");
-      }
-
+      if (!res.ok || !data.success) throw new Error(data.error || "Failed to deliver the calendar.");
       setEmailState({
         status: "success",
-        message: "Email sent! Check your inbox. Tap the attached .ics file to add all dates to your calendar in one tap.",
+        message: "Sent. Check your inbox and open the attached .ics file to add all dates at once.",
       });
       setEmailInput("");
     } catch (err) {
       setEmailState({
         status: "error",
-        message: err.message || "Could not dispatch email. Please use direct download below.",
+        message: err.message || "Could not send the email. Use the direct download instead.",
       });
     }
   };
@@ -102,283 +110,237 @@ export function ElectionCalendar() {
     if (navigator.share) {
       navigator.share({
         title: "2027 Nigeria Election Calendar",
-        text: "Download and sync all verified 2027 Nigeria Election milestones to your phone, Google Calendar, or Apple Calendar.",
+        text: "All the 2027 Nigeria election milestones, ready to add to your calendar.",
         url: window.location.href,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard?.writeText(window.location.href);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2500);
     }
   };
 
+  const openEmailModal = () => {
+    setEmailState({ status: "idle", message: "" });
+    setEmailModalOpen(true);
+  };
+
   return (
-    <>
-      <Container className="pb-16 pt-6 sm:pt-8">
-        <PageHeader
-          eyebrow="Nigeria 2027 General Elections"
-          title="Official Election Calendar & Timetable"
-          description="Statutory deadlines, voter registration cutoffs, and polling dates derived from the 1999 Constitution and Electoral Act. Sync directly to your phone, Google Calendar, Apple Calendar, or desktop."
-        />
+    <Container className="py-12 sm:py-16">
+      <PageHeader
+        eyebrow="Nigeria 2027 general elections"
+        title="Election calendar"
+        description="Statutory deadlines, registration cutoffs and polling dates drawn from the 1999 Constitution and the Electoral Act. Add them to your phone, Google Calendar or Apple Calendar."
+      />
 
-        {/* Countdown Hero Banner */}
-        <div className="relative mt-6 overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 via-neutral-900/60 to-black p-6 sm:p-8 backdrop-blur-sm">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                <Clock className="h-3.5 w-3.5" /> Next Major Milestone
-              </div>
-              <h2 className="mt-3 text-xl sm:text-2xl font-bold text-white">
-                Presidential & National Assembly Election Day
-              </h2>
-              <p className="mt-1 text-sm text-neutral-400 max-w-xl">
-                Saturday, January 16, 2027 &bull; Polling opens 8:30 AM to 2:30 PM WAT across all polling units nationwide.
-              </p>
-            </div>
-
-            {/* Countdown Clock */}
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2 sm:px-4 sm:py-3 min-w-[65px] sm:min-w-[76px]">
-                <span className="text-xl sm:text-3xl font-extrabold text-white font-mono">{countdown.days}</span>
-                <span className="text-[10px] sm:text-xs text-neutral-400 uppercase tracking-wider">Days</span>
-              </div>
-              <span className="text-xl font-bold text-neutral-600">:</span>
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2 sm:px-4 sm:py-3 min-w-[55px] sm:min-w-[65px]">
-                <span className="text-xl sm:text-3xl font-extrabold text-emerald-400 font-mono">{String(countdown.hours).padStart(2, "0")}</span>
-                <span className="text-[10px] sm:text-xs text-neutral-400 uppercase tracking-wider">Hours</span>
-              </div>
-              <span className="text-xl font-bold text-neutral-600">:</span>
-              <div className="flex flex-col items-center justify-center rounded-xl border border-white/10 bg-neutral-900/80 px-3 py-2 sm:px-4 sm:py-3 min-w-[55px] sm:min-w-[65px]">
-                <span className="text-xl sm:text-3xl font-extrabold text-white font-mono">{String(countdown.mins).padStart(2, "0")}</span>
-                <span className="text-[10px] sm:text-xs text-neutral-400 uppercase tracking-wider">Mins</span>
-              </div>
-            </div>
+      {/* Countdown */}
+      <div className="cs-card mt-6 p-5 sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <span className="inline-flex items-center gap-1.5 text-2xs font-semibold uppercase tracking-[0.08em] text-brand-bright">
+              <Clock size={12} aria-hidden="true" /> Next major milestone
+            </span>
+            <h2 className="mt-2 text-lg font-semibold text-fg sm:text-xl">
+              Presidential and National Assembly election day
+            </h2>
+            <p className="mt-1 text-sm text-fg-muted">
+              Saturday, 16 January 2027. Polls open 8:30 AM to 2:30 PM WAT, nationwide.
+            </p>
           </div>
 
-          {/* Quick Action Bar */}
-          <div className="mt-8 pt-6 border-t border-white/10 flex flex-wrap items-center gap-3">
-            <a
-              href={getWebcalUrl()}
-              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition-all"
-            >
-              <CalendarIcon className="h-4 w-4" /> Add to Apple Calendar
-            </a>
-
-            <a
-              href={getGoogleCalendarFeedUrl()}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition-all"
-            >
-              <ExternalLink className="h-4 w-4 text-emerald-400" /> Add to Google Calendar
-            </a>
-
-            <a
-              href={getIcsDownloadUrl()}
-              download="nigeria-2027-elections.ics"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition-all"
-            >
-              <Download className="h-4 w-4" /> Download .ics
-            </a>
-
-            <button
-              onClick={() => {
-                setEmailState({ status: "idle", message: "" });
-                setEmailModalOpen(true);
-              }}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 hover:bg-white/10 px-4 py-2.5 text-sm font-medium text-white transition-all"
-            >
-              <Mail className="h-4 w-4" /> Email Me Calendar
-            </button>
-
-            <button
-              onClick={handleShareCalendar}
-              className="inline-flex items-center gap-2 rounded-xl border border-white/10 hover:border-white/20 px-3 py-2.5 text-xs text-neutral-400 hover:text-white transition-all ml-auto"
-            >
-              <Share2 className="h-3.5 w-3.5" /> {copiedLink ? "Link Copied!" : "Share"}
-            </button>
+          <div className="flex items-center gap-2" role="timer" aria-label="Time until election day">
+            <CountdownUnit value={countdown.days} label="Days" />
+            <CountdownUnit value={String(countdown.hours).padStart(2, "0")} label="Hours" accent />
+            <CountdownUnit value={String(countdown.mins).padStart(2, "0")} label="Mins" />
           </div>
         </div>
 
-        {/* Filter Categories */}
-        <div className="mt-10 flex flex-wrap items-center gap-2 border-b border-white/10 pb-4">
-          {CALENDAR_CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setActiveCategory(cat.key)}
-              className={cn(
-                "rounded-lg px-3.5 py-1.5 text-xs sm:text-sm font-medium transition-all",
-                activeCategory === cat.key
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                  : "bg-neutral-900/60 text-neutral-400 hover:text-neutral-200 border border-white/5 hover:border-white/10"
-              )}
-            >
-              {cat.label}
-            </button>
-          ))}
+        <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-line-subtle pt-5">
+          <Button as="a" href={getGoogleCalendarFeedUrl()} target="_blank" rel="noopener noreferrer" variant="primary" size="sm">
+            <CalendarIcon size={14} aria-hidden="true" />
+            Add to Google Calendar
+          </Button>
+          <Button as="a" href={getWebcalUrl()} variant="secondary" size="sm">
+            <CalendarIcon size={14} aria-hidden="true" />
+            Add to Apple Calendar
+          </Button>
+          <Button as="a" href={getIcsDownloadUrl()} download="nigeria-2027-elections.ics" variant="secondary" size="sm">
+            <Download size={14} aria-hidden="true" />
+            Download .ics
+          </Button>
+          <Button variant="ghost" size="sm" onClick={openEmailModal}>
+            <Mail size={14} aria-hidden="true" />
+            Email me the calendar
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleShareCalendar} className="sm:ml-auto">
+            <Share2 size={13} aria-hidden="true" />
+            {copiedLink ? "Link copied" : "Share"}
+          </Button>
         </div>
+      </div>
 
-        {/* Milestones Timeline */}
-        <div className="mt-8 space-y-4">
-          {filteredEvents.map((event, idx) => (
-            <div
-              key={event.id}
-              className={cn(
-                "group relative rounded-xl border p-5 sm:p-6 transition-all",
-                event.isMajor
-                  ? "border-emerald-500/30 bg-neutral-900/80 shadow-md shadow-emerald-950/20"
-                  : "border-white/10 bg-neutral-900/40 hover:border-white/20"
-              )}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="space-y-1.5 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs font-semibold text-emerald-400">
-                      {event.date}
+      {/* Category filter */}
+      <div className="mt-8 flex flex-wrap items-center gap-2">
+        {CALENDAR_CATEGORIES.map((category) => (
+          <button
+            key={category.key}
+            type="button"
+            onClick={() => setActiveCategory(category.key)}
+            aria-pressed={activeCategory === category.key}
+            className={cn(
+              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              activeCategory === category.key
+                ? "border-brand-bright/40 bg-brand-bright/10 text-brand-bright"
+                : "border-line bg-surface text-fg-muted hover:border-line-strong hover:text-fg",
+            )}
+          >
+            {category.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Timeline */}
+      <div className="mt-5 space-y-3">
+        {filteredEvents.map((event) => (
+          <article
+            key={event.id}
+            className={cn(
+              "cs-card p-4 sm:p-5",
+              event.isMajor && "border-brand-bright/30",
+            )}
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-brand-bright">{event.date}</span>
+                  <Badge tone={event.isMajor ? "brand" : "neutral"} size="sm">
+                    {event.categoryLabel}
+                  </Badge>
+                  {event.timeStart ? (
+                    <span className="inline-flex items-center gap-1 text-xs text-fg-muted">
+                      <Clock size={11} aria-hidden="true" />
+                      {event.timeStart.slice(0, 5)} to {event.timeEnd.slice(0, 5)} WAT
                     </span>
-                    <span className="text-xs text-neutral-500">&bull;</span>
-                    <Badge tone={event.isMajor ? "verified" : "neutral"}>
-                      {event.categoryLabel}
-                    </Badge>
-                    {event.timeStart && (
-                      <span className="text-xs text-neutral-400 inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" /> {event.timeStart.slice(0, 5)} - {event.timeEnd.slice(0, 5)} WAT
-                      </span>
-                    )}
-                  </div>
+                  ) : null}
+                </div>
 
-                  <h3 className="text-lg font-bold text-white group-hover:text-emerald-300 transition-colors">
-                    {event.title}
-                  </h3>
+                <h3 className="mt-2 text-base font-semibold leading-snug text-fg">{event.title}</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-fg-secondary">{event.description}</p>
 
-                  <p className="text-sm text-neutral-300 leading-relaxed max-w-3xl">
-                    {event.description}
-                  </p>
-
-                  <div className="pt-2 flex flex-wrap items-center gap-4 text-xs text-neutral-400">
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-fg-muted">
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin size={11} className="text-fg-faint" aria-hidden="true" />
+                    {event.location}
+                  </span>
+                  {event.legalBasis ? (
                     <span className="inline-flex items-center gap-1">
-                      <MapPin className="h-3 w-3 text-neutral-500" /> {event.location}
+                      <Scale size={11} className="text-fg-faint" aria-hidden="true" />
+                      {event.legalBasis}
                     </span>
-                    {event.legalBasis && (
-                      <span className="inline-flex items-center gap-1 text-neutral-400">
-                        <Scale className="h-3 w-3 text-emerald-500/70" /> {event.legalBasis}
-                      </span>
-                    )}
-                  </div>
+                  ) : null}
                 </div>
+              </div>
 
-                {/* Individual 1-Click Calendar Add */}
-                <div className="sm:self-center flex sm:flex-col items-center gap-2">
-                  <a
-                    href={getGoogleCalendarUrl(event)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white transition-all"
-                  >
-                    Google Cal <ExternalLink className="h-3 w-3" />
-                  </a>
-                  <a
-                    href={getWebcalUrl()}
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/5 hover:bg-white/10 px-3 py-1.5 text-xs font-medium text-neutral-300 hover:text-white transition-all"
-                  >
-                    Apple Cal
-                  </a>
-                </div>
+              <div className="flex items-center gap-2 sm:shrink-0 sm:self-center">
+                <Button as="a" href={getGoogleCalendarUrl(event)} target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
+                  Google Cal
+                  <ExternalLink size={12} aria-hidden="true" />
+                </Button>
+                <Button as="a" href={getWebcalUrl()} variant="ghost" size="sm">
+                  Apple Cal
+                </Button>
               </div>
             </div>
-          ))}
-        </div>
+          </article>
+        ))}
+      </div>
 
-        {/* Informational Callout */}
-        <div className="mt-12 rounded-xl border border-white/10 bg-neutral-900/30 p-6 text-xs text-neutral-400 space-y-2">
-          <div className="font-semibold text-white text-sm">About CivicSense 2027 Election Data</div>
-          <p>
-            All calendar dates are based on the primary constitutional provisions governing Nigerian general elections and the Electoral Act 2022. As the Independent National Electoral Commission (INEC) issues supplementary notices or gazettes specific operational guidelines, this calendar is updated and automatically synced to all subscribed devices.
-          </p>
-        </div>
-      </Container>
+      <div className="cs-card mt-8 p-5">
+        <h2 className="text-sm font-semibold text-fg">About this calendar</h2>
+        <p className="mt-1.5 text-sm leading-relaxed text-fg-muted">
+          Dates follow the constitutional provisions governing Nigerian general elections and the
+          Electoral Act. When INEC issues a supplementary notice or gazette, this calendar is updated
+          and re-syncs to every subscribed device.
+        </p>
+      </div>
 
-      {/* Email Delivery Modal */}
-      {emailModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-md rounded-2xl border border-white/15 bg-neutral-900 p-6 sm:p-7 shadow-2xl">
-            <button
-              onClick={() => setEmailModalOpen(false)}
-              className="absolute right-4 top-4 rounded-lg p-1.5 text-neutral-400 hover:bg-white/10 hover:text-white transition-all"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-emerald-400">
-                <CalendarIcon className="h-6 w-6" />
+      {/* Email modal */}
+      {emailModalOpen ? (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label="Get the calendar by email"
+            className="cs-enter w-full max-w-md rounded-card border border-line bg-surface p-5 shadow-2xl sm:p-6"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-control border border-brand-bright/25 bg-brand-bright/10 p-2 text-brand-bright">
+                <CalendarIcon size={18} aria-hidden="true" />
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Get 2027 Calendar by Email</h3>
-                <p className="text-xs text-neutral-400">Includes universal .ics file & 1-tap calendar sync</p>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold text-fg">Get the calendar by email</h3>
+                <p className="mt-0.5 text-xs text-fg-muted">Includes a universal .ics file for one-tap sync.</p>
               </div>
+              <button
+                type="button"
+                onClick={() => setEmailModalOpen(false)}
+                aria-label="Close"
+                className="rounded-control border border-line p-1.5 text-fg-muted transition-colors hover:text-fg"
+              >
+                <X size={15} aria-hidden="true" />
+              </button>
             </div>
 
             {emailState.status === "success" ? (
-              <div className="space-y-4 py-3">
-                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-300 flex items-start gap-3 text-sm leading-relaxed">
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400 mt-0.5" />
-                  <span>{emailState.message}</span>
+              <div className="mt-4 space-y-3">
+                <div className="flex items-start gap-2.5 rounded-control border border-verified/25 bg-verified/10 p-3 text-sm text-verified">
+                  <CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                  <span className="leading-relaxed">{emailState.message}</span>
                 </div>
-                <div className="pt-2 flex flex-col gap-2">
-                  <a
-                    href={getIcsDownloadUrl()}
-                    download="nigeria-2027-elections.ics"
-                    className="w-full text-center rounded-xl bg-neutral-800 hover:bg-neutral-700 py-2.5 text-xs font-semibold text-white transition-all"
-                  >
-                    Direct Download .ics Now
-                  </a>
-                  <Button variant="secondary" onClick={() => setEmailModalOpen(false)}>
+                <div className="flex flex-col gap-2">
+                  <Button as="a" href={getIcsDownloadUrl()} download="nigeria-2027-elections.ics" variant="secondary" className="w-full justify-center">
+                    <Download size={14} aria-hidden="true" />
+                    Download .ics now
+                  </Button>
+                  <Button variant="ghost" onClick={() => setEmailModalOpen(false)} className="w-full justify-center">
                     Close
                   </Button>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleEmailSubscribe} className="space-y-4">
-                <p className="text-xs text-neutral-300 leading-relaxed">
-                  Enter your email to receive the complete 2027 Nigeria Election Calendar. Open the email on your phone or computer to add all 12 dates with 1 tap.
+              <form onSubmit={handleEmailSubscribe} className="mt-4 space-y-3">
+                <p className="text-sm leading-relaxed text-fg-secondary">
+                  Enter your email to receive the full 2027 election calendar. Open it on your phone to
+                  add all dates at once.
                 </p>
 
                 <div>
-                  <label htmlFor="calendar-email-input" className="block text-xs font-semibold text-neutral-300 mb-1.5">
-                    Your Email Address
+                  <label htmlFor="calendar-email" className="cs-label">
+                    Your email address
                   </label>
                   <input
-                    id="calendar-email-input"
+                    id="calendar-email"
                     type="email"
                     value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="e.g. voter@gmail.com"
+                    onChange={(event) => setEmailInput(event.target.value)}
+                    placeholder="you@example.com"
                     required
-                    className="w-full rounded-xl border border-white/15 bg-neutral-950 px-3.5 py-2.5 text-sm text-white placeholder-neutral-500 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="mt-1.5 w-full rounded-control border border-line bg-surface px-3 py-2 text-sm text-fg placeholder:text-fg-faint focus:border-brand-bright focus:outline-none"
                   />
                 </div>
 
-                {emailState.status === "error" && (
-                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-300 flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 shrink-0 text-red-400" />
+                {emailState.status === "error" ? (
+                  <div className="flex items-center gap-2 rounded-control border border-false/25 bg-false/10 p-2.5 text-xs text-false">
+                    <AlertCircle size={14} className="shrink-0" aria-hidden="true" />
                     <span>{emailState.message}</span>
                   </div>
-                )}
+                ) : null}
 
-                <div className="pt-2 flex items-center gap-3">
-                  <Button
-                    type="submit"
-                    disabled={emailState.status === "loading"}
-                    className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5"
-                  >
-                    {emailState.status === "loading" ? "Sending..." : "Send Calendar"}
+                <div className="flex items-center gap-2 pt-1">
+                  <Button type="submit" variant="primary" disabled={emailState.status === "loading"} className="flex-1 justify-center">
+                    {emailState.status === "loading" ? "Sending..." : "Send calendar"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setEmailModalOpen(false)}
-                  >
+                  <Button type="button" variant="secondary" onClick={() => setEmailModalOpen(false)}>
                     Cancel
                   </Button>
                 </div>
@@ -386,8 +348,8 @@ export function ElectionCalendar() {
             )}
           </div>
         </div>
-      )}
-    </>
+      ) : null}
+    </Container>
   );
 }
 

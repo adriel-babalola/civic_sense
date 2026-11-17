@@ -164,68 +164,83 @@ export const ELECTION_CALENDAR_2027 = [
 ];
 
 export const CALENDAR_CATEGORIES = [
-  { key: "all", label: "All Milestones" },
-  { key: "polling", label: "Polling Days" },
-  { key: "voters", label: "Voter Registration & PVC" },
-  { key: "campaign", label: "Campaign Periods" },
-  { key: "primaries", label: "Party Primaries" },
+  { key: "all", label: "All milestones" },
+  { key: "polling", label: "Polling days" },
+  { key: "voters", label: "Voter registration" },
+  { key: "campaign", label: "Campaign periods" },
+  { key: "primaries", label: "Party primaries" },
   { key: "nomination", label: "Nominations" },
-  { key: "statutory", label: "Statutory Notices" },
+  { key: "statutory", label: "Statutory notices" },
+  { key: "contingency", label: "Run-off" },
+  { key: "inauguration", label: "Inauguration" },
 ];
 
+function apiBase() {
+  return CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
+}
+
 /**
- * Generate a direct webcal link for Apple Calendar (iPhone / iPad / Mac).
+ * Add whole days to an ISO date (YYYY-MM-DD) using UTC arithmetic.
+ *
+ * Date math through `new Date(iso)` and the local getters is the bug this
+ * replaces: in a timezone behind UTC, `new Date("2026-02-13")` is the 12th
+ * locally, so "add a day" returns the 13th and an all-day event is built with
+ * `DTSTART == DTEND`. Google Calendar rejects that as an invalid range and shows
+ * "Unable to load event". UTC arithmetic is timezone-independent.
+ */
+function addDaysIso(iso, days) {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+const compact = (iso) => String(iso).replace(/-/g, "");
+
+/**
+ * Direct webcal link for Apple Calendar (iPhone / iPad / Mac).
  */
 export function getWebcalUrl() {
-  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
-  const url = `${base}/api/calendar/2027.ics`;
-  return url.replace(/^https?:/, "webcal:");
+  return `${apiBase()}/api/calendar/2027.ics`.replace(/^https?:/, "webcal:");
 }
 
-/**
- * Direct HTTPS download link for .ics file.
- */
+/** Direct HTTPS download link for the .ics file. */
 export function getIcsDownloadUrl() {
-  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
-  return `${base}/api/calendar/2027.ics`;
+  return `${apiBase()}/api/calendar/2027.ics`;
 }
 
-/**
- * Generate a 1-click Google Calendar subscription link for the full 2027 calendar (Android / Web).
- */
+/** Subscribe the whole calendar in Google Calendar (web / Android). */
 export function getGoogleCalendarFeedUrl() {
-  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
-  const icsUrl = `${base}/api/calendar/2027.ics`;
-  return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icsUrl)}`;
+  return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(getIcsDownloadUrl())}`;
 }
 
 /**
- * Generate a 1-click Google Calendar URL for a specific event.
+ * A one-click "add this event" link for Google Calendar.
+ *
+ * All-day events use exclusive end dates (`DTEND` semantics), so the end is
+ * always the day after the last day, computed in UTC. Timed events carry the
+ * Africa/Lagos zone.
  */
 export function getGoogleCalendarUrl(event) {
-  const pad = (n) => String(n).padStart(2, "0");
-  const sDate = event.date.replace(/-/g, "");
-  let datesParam = `${sDate}/${sDate}`;
+  const startIso = event.date;
+  const endIso = event.endDate || event.date;
+
+  const params = new URLSearchParams({ action: "TEMPLATE", text: event.title });
 
   if (event.timeStart) {
-    const sTime = event.timeStart.replace(/:/g, "");
-    const eTime = (event.timeEnd || "143000").replace(/:/g, "");
-    datesParam = `${sDate}T${sTime}/${sDate}T${eTime}`;
+    const sTime = event.timeStart.replace(/:/g, "").slice(0, 6);
+    const eTime = (event.timeEnd || "14:30:00").replace(/:/g, "").slice(0, 6);
+    params.set("dates", `${compact(startIso)}T${sTime}/${compact(endIso)}T${eTime}`);
+    params.set("ctz", "Africa/Lagos");
   } else {
-    const endD = new Date(event.endDate || event.date);
-    endD.setDate(endD.getDate() + 1);
-    const eDate = `${endD.getFullYear()}${pad(endD.getMonth() + 1)}${pad(endD.getDate())}`;
-    datesParam = `${sDate}/${eDate}`;
+    params.set("dates", `${compact(startIso)}/${compact(addDaysIso(endIso, 1))}`);
   }
 
-  const params = new URLSearchParams({
-    action: "TEMPLATE",
-    text: event.title,
-    dates: datesParam,
-    details: `${event.description}\n\nVerified by CivicSense (https://civicsense.fyi/calendar)`,
-    location: event.location || "Nigeria",
-    ctz: "Africa/Lagos",
-  });
+  const detailLines = [event.description];
+  if (event.legalBasis) detailLines.push(`Legal basis: ${event.legalBasis}`);
+  detailLines.push("Source: CivicSense 2027 election calendar (https://civicsense.fyi/calendar)");
+
+  params.set("details", detailLines.filter(Boolean).join("\n\n"));
+  params.set("location", event.location || "Nigeria");
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }

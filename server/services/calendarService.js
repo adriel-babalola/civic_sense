@@ -28,6 +28,29 @@ function escapeIcsText(str = "") {
     .replace(/\n/g, "\\n");
 }
 
+/** Add whole days to a YYYY-MM-DD date using UTC arithmetic. */
+function addDaysIso(iso, days) {
+  const date = new Date(`${iso}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+/**
+ * RFC 5545 folds content lines longer than 75 octets onto continuation lines
+ * beginning with a space. Google and Outlook are strict about this on long
+ * DESCRIPTION lines; without folding a feed can be dropped as malformed.
+ */
+function foldLine(line, limit = 75) {
+  if (line.length <= limit) return line;
+  const chunks = [line.slice(0, limit)];
+  let rest = line.slice(limit);
+  while (rest.length > 0) {
+    chunks.push(` ${rest.slice(0, limit - 1)}`);
+    rest = rest.slice(limit - 1);
+  }
+  return chunks.join("\r\n");
+}
+
 /**
  * Generate full RFC 5545 iCalendar (.ics) string with Apple / iOS extensions.
  */
@@ -49,13 +72,11 @@ export function generateIcsCalendar(events = ELECTION_CALENDAR_2027) {
   for (const event of events) {
     const cleanStart = event.date.replace(/-/g, "");
     let cleanEnd = (event.endDate || event.date).replace(/-/g, "");
-    
-    // For all-day events, DTEND is exclusive so add 1 day if start == end
+
+    // DTEND is exclusive, so an all-day event ends the day after its last day.
+    // UTC arithmetic keeps this identical on a server in any timezone.
     if (!event.timeStart) {
-      const endD = new Date(event.endDate || event.date);
-      endD.setDate(endD.getDate() + 1);
-      const pad = (n) => String(n).padStart(2, "0");
-      cleanEnd = `${endD.getFullYear()}${pad(endD.getMonth() + 1)}${pad(endD.getDate())}`;
+      cleanEnd = addDaysIso(event.endDate || event.date, 1).replace(/-/g, "");
     }
 
     lines.push("BEGIN:VEVENT");
@@ -104,5 +125,8 @@ export function generateIcsCalendar(events = ELECTION_CALENDAR_2027) {
   }
 
   lines.push("END:VCALENDAR");
-  return lines.join("\r\n");
+  // RFC 5545: CRLF line endings, long lines folded, and a trailing CRLF.
+  // Note the arrow: `lines.map(foldLine)` would pass the index as the fold
+  // limit and hang the request.
+  return `${lines.map((line) => foldLine(line)).join("\r\n")}\r\n`;
 }
