@@ -22,6 +22,7 @@ import {
   getArticlesByState,
   getLatestArticles,
   backfillArticleStates,
+  saveCalendarSubscriber,
 } from "./services/db.js";
 import { startScraper, getScraperStats, syncOnce } from "./services/scraper.js";
 import { validateImageBuffer, bufferToDataUrl, imageFromUrl } from "./services/image.js";
@@ -44,6 +45,9 @@ import { NEWS_SOURCES } from "./services/newsSources.js";
 import { detectStates, NIGERIAN_STATES } from "./services/geo.js";
 import adminRouter from "./routes/admin.js";
 import { requireAdmin } from "./middleware/adminAuth.js";
+import { generateIcsCalendar } from "./services/calendarService.js";
+import { ELECTION_CALENDAR_2027 } from "./data/electionCalendar2027.js";
+import { sendCalendarEmail } from "./services/mailer.js";
 
 const app = express();
 app.set("trust proxy", 1);
@@ -445,9 +449,6 @@ app.get("/api/reports", async (req, res) => {
 // Admin API routes (mounted under /api/admin)
 app.use("/api/admin", adminRouter);
 
-// Public profile adjustment suggestion submission
-
-
 app.post("/api/feedback", async (req, res) => {
   const { message, email, rating, page } = req.body || {};
   if (!message || !String(message).trim()) {
@@ -614,6 +615,39 @@ app.get("/api/news/latest", async (req, res) => {
     const articles = await getLatestArticles(limit);
     res.json({ success: true, data: articles.map(publicArticle) });
   } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 2027 Nigeria Election Calendar routes
+app.get("/api/calendar/2027.ics", (req, res) => {
+  const ics = generateIcsCalendar(ELECTION_CALENDAR_2027);
+  res.setHeader("Content-Type", "text/calendar; charset=utf-8");
+  res.setHeader("Content-Disposition", 'attachment; filename="nigeria-2027-elections.ics"');
+  res.setHeader("Cache-Control", "public, max-age=3600");
+  res.send(ics);
+});
+
+app.get("/api/calendar/events", (req, res) => {
+  res.json({ success: true, data: ELECTION_CALENDAR_2027 });
+});
+
+app.post("/api/calendar/subscribe", async (req, res) => {
+  const { email, format, source } = req.body || {};
+  if (!email || !/^\S+@\S+\.\S+$/.test(String(email).trim())) {
+    return res.status(400).json({ success: false, error: "Please provide a valid email address." });
+  }
+  try {
+    const cleanEmail = String(email).trim().toLowerCase();
+    await saveCalendarSubscriber({ email: cleanEmail, format, source });
+    const mailResult = await sendCalendarEmail(cleanEmail);
+    res.json({
+      success: true,
+      message: "2027 Election Calendar sent! Check your inbox or tap the attached .ics to add all dates to your calendar.",
+      data: mailResult,
+    });
+  } catch (err) {
+    console.error(`[Calendar Subscribe] Error: ${err.message}`);
     res.status(500).json({ success: false, error: err.message });
   }
 });

@@ -1,0 +1,233 @@
+import { CONFIG } from "../config/config";
+
+export const ELECTION_CALENDAR_2027 = [
+  {
+    id: "inec-notice-2026",
+    title: "INEC Official Notice of 2027 General Elections",
+    category: "statutory",
+    categoryLabel: "Official Notice",
+    date: "2026-02-13",
+    endDate: "2026-02-13",
+    description: "INEC publishes the official Notice of Election in compliance with Section 28(1) of the Electoral Act 2026.",
+    location: "INEC Headquarters, Abuja & 36 State Offices",
+    legalBasis: "Section 28(1), Electoral Act 2026",
+    alarms: [7, 1],
+    isMajor: false,
+  },
+  {
+    id: "party-primaries-window",
+    title: "Political Party Primaries & Dispute Resolution Window",
+    category: "primaries",
+    categoryLabel: "Party Primaries",
+    date: "2026-04-23",
+    endDate: "2026-05-30",
+    description: "Political parties conduct congresses and primary elections to nominate candidates for Presidential, National Assembly, Governorship, and State Assembly contests.",
+    location: "Nationwide Party Secretariats & Congress Venues",
+    legalBasis: "Electoral Act 2026",
+    alarms: [14, 1],
+    isMajor: false,
+  },
+  {
+    id: "candidate-submission-deadline",
+    title: "Submission of Nomination Forms (Presidential & NASS)",
+    category: "nomination",
+    categoryLabel: "Nominations",
+    date: "2026-06-27",
+    endDate: "2026-07-11",
+    description: "Window for political parties to submit validated personal particulars and nomination forms for Presidential and National Assembly candidates to INEC.",
+    location: "INEC Portal, Abuja",
+    legalBasis: "Electoral Act 2026",
+    alarms: [7, 1],
+    isMajor: false,
+  },
+  {
+    id: "cvr-pvc-collection-deadline",
+    title: "Continuous Voter Registration (CVR) Deadline",
+    category: "voters",
+    categoryLabel: "Voter Registration",
+    date: "2026-08-17",
+    endDate: "2026-08-17",
+    description: "Final deadline for Nigerian citizens to complete Continuous Voter Registration ahead of Permanent Voter Card (PVC) production and distribution.",
+    location: "INEC LGA Offices Nationwide",
+    legalBasis: "Electoral Act 2026",
+    alarms: [14, 3, 1],
+    isMajor: true,
+  },
+  {
+    id: "presidential-campaign-begins",
+    title: "Official Campaign Period Begins (Presidential & NASS)",
+    category: "campaign",
+    categoryLabel: "Campaigns",
+    date: "2026-08-19",
+    endDate: "2026-08-19",
+    description: "Public campaigning by certified political parties and candidates officially commences (150 days before polling day under the Electoral Act 2026).",
+    location: "Nationwide",
+    legalBasis: "Section 94(1), Electoral Act 2026",
+    alarms: [7, 1],
+    isMajor: false,
+  },
+  {
+    id: "governorship-campaign-begins",
+    title: "Official Campaign Period Begins (Governorship & State Assembly)",
+    category: "campaign",
+    categoryLabel: "Campaigns",
+    date: "2026-09-09",
+    endDate: "2026-09-09",
+    description: "Public campaigning for Governorship and State Houses of Assembly candidates officially commences.",
+    location: "Participating States",
+    legalBasis: "Electoral Act 2026",
+    alarms: [7, 1],
+    isMajor: false,
+  },
+  {
+    id: "campaign-blackout-presidential",
+    title: "Campaign Blackout Window (Presidential & NASS)",
+    category: "campaign",
+    categoryLabel: "Campaign Blackout",
+    date: "2027-01-15",
+    endDate: "2027-01-15",
+    description: "All political campaigns, advertisements, rallies, and promotional media for Presidential and NASS polls must cease 24 hours prior to polling.",
+    location: "Nationwide Media & Rallies",
+    legalBasis: "Section 96, Electoral Act 2026",
+    alarms: [1],
+    isMajor: false,
+  },
+  {
+    id: "presidential-election-day",
+    title: "2027 Presidential & National Assembly Election (POLLING DAY)",
+    category: "polling",
+    categoryLabel: "Polling Day",
+    date: "2027-01-16",
+    endDate: "2027-01-16",
+    timeStart: "08:30:00",
+    timeEnd: "14:30:00",
+    description: "Polling day across all polling units in Nigeria. Accreditation and voting for President, Vice President, Senate, and House of Representatives.",
+    location: "All Polling Units Across 36 States & FCT",
+    legalBasis: "1999 Constitution & Electoral Act 2026",
+    alarms: [7, 2, 1, 0],
+    isMajor: true,
+  },
+  {
+    id: "campaign-blackout-governorship",
+    title: "Campaign Blackout Window (Governorship & State Assembly)",
+    category: "campaign",
+    categoryLabel: "Campaign Blackout",
+    date: "2027-02-05",
+    endDate: "2027-02-05",
+    description: "All political campaigns, rallies, and promotional media for Governorship and State Assembly polls must cease 24 hours prior to polling.",
+    location: "Participating States Media & Rallies",
+    legalBasis: "Section 96, Electoral Act 2026",
+    alarms: [1],
+    isMajor: false,
+  },
+  {
+    id: "governorship-election-day",
+    title: "2027 Governorship & State Houses of Assembly Election",
+    category: "polling",
+    categoryLabel: "Polling Day",
+    date: "2027-02-06",
+    endDate: "2027-02-06",
+    timeStart: "08:30:00",
+    timeEnd: "14:30:00",
+    description: "Polling day for State Governors and Members of State Houses of Assembly in 28 states (excluding the 8 off-cycle states).",
+    location: "Polling Units in Participating States",
+    legalBasis: "1999 Constitution & Electoral Act 2026",
+    alarms: [7, 2, 1],
+    isMajor: true,
+  },
+  {
+    id: "runoff-window",
+    title: "Presidential Run-Off Window (If Required)",
+    category: "contingency",
+    categoryLabel: "Contingency / Run-off",
+    date: "2027-02-28",
+    endDate: "2027-02-28",
+    description: "Scheduled date for a second ballot if no presidential candidate secures the required majority and 25% in two-thirds of states and FCT.",
+    location: "Nationwide",
+    legalBasis: "Section 134, 1999 Constitution",
+    alarms: [3, 1],
+    isMajor: false,
+  },
+  {
+    id: "inauguration-day",
+    title: "Presidential Inauguration & Handover Day",
+    category: "inauguration",
+    categoryLabel: "Inauguration",
+    date: "2027-05-29",
+    endDate: "2027-05-29",
+    description: "Official swearing-in ceremony of the President-Elect and Vice President-Elect of the Federal Republic of Nigeria.",
+    location: "Eagle Square, Abuja",
+    legalBasis: "1999 Constitution of Nigeria",
+    alarms: [7, 1],
+    isMajor: true,
+  },
+];
+
+export const CALENDAR_CATEGORIES = [
+  { key: "all", label: "All Milestones" },
+  { key: "polling", label: "Polling Days" },
+  { key: "voters", label: "Voter Registration & PVC" },
+  { key: "campaign", label: "Campaign Periods" },
+  { key: "primaries", label: "Party Primaries" },
+  { key: "nomination", label: "Nominations" },
+  { key: "statutory", label: "Statutory Notices" },
+];
+
+/**
+ * Generate a direct webcal link for Apple Calendar (iPhone / iPad / Mac).
+ */
+export function getWebcalUrl() {
+  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
+  const url = `${base}/api/calendar/2027.ics`;
+  return url.replace(/^https?:/, "webcal:");
+}
+
+/**
+ * Direct HTTPS download link for .ics file.
+ */
+export function getIcsDownloadUrl() {
+  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
+  return `${base}/api/calendar/2027.ics`;
+}
+
+/**
+ * Generate a 1-click Google Calendar subscription link for the full 2027 calendar (Android / Web).
+ */
+export function getGoogleCalendarFeedUrl() {
+  const base = CONFIG.API_BASE_URL || "https://civic-sense-8d2m.onrender.com";
+  const icsUrl = `${base}/api/calendar/2027.ics`;
+  return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(icsUrl)}`;
+}
+
+/**
+ * Generate a 1-click Google Calendar URL for a specific event.
+ */
+export function getGoogleCalendarUrl(event) {
+  const pad = (n) => String(n).padStart(2, "0");
+  const sDate = event.date.replace(/-/g, "");
+  let datesParam = `${sDate}/${sDate}`;
+
+  if (event.timeStart) {
+    const sTime = event.timeStart.replace(/:/g, "");
+    const eTime = (event.timeEnd || "143000").replace(/:/g, "");
+    datesParam = `${sDate}T${sTime}/${sDate}T${eTime}`;
+  } else {
+    const endD = new Date(event.endDate || event.date);
+    endD.setDate(endD.getDate() + 1);
+    const eDate = `${endD.getFullYear()}${pad(endD.getMonth() + 1)}${pad(endD.getDate())}`;
+    datesParam = `${sDate}/${eDate}`;
+  }
+
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: event.title,
+    dates: datesParam,
+    details: `${event.description}\n\nVerified by CivicSense (https://civicsense.fyi/calendar)`,
+    location: event.location || "Nigeria",
+    ctz: "Africa/Lagos",
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+
+export default ELECTION_CALENDAR_2027;

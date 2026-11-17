@@ -26,6 +26,7 @@ const COLUMNS = [
   {
     heading: "Civic data",
     links: [
+      { to: "/calendar", label: "2027 Election Calendar" },
       { to: "/politicians", label: "2027 presidential candidates" },
       { to: "/map", label: "Incident map" },
       { to: "/report", label: "Report what you saw" },

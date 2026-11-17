@@ -38,6 +38,7 @@ export const FEATURES = {
   incidentMap: (import.meta.env.VITE_FEATURE_MAP ?? "true") !== "false",
   liveFeed: (import.meta.env.VITE_FEATURE_FEED ?? "true") !== "false",
   reports: (import.meta.env.VITE_FEATURE_REPORTS ?? "true") !== "false",
+  electionsCalendar: (import.meta.env.VITE_FEATURE_CALENDAR ?? "true") !== "false",
 };
 
 export default CONFIG;
