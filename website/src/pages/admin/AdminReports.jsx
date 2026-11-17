@@ -1,16 +1,11 @@
 import { useEffect, useState } from "react";
 import {
-  AlertTriangle,
   Check,
   CheckCircle2,
   ExternalLink,
-  Filter,
   MapPin,
   RefreshCw,
-  Search,
-  ShieldAlert,
   X,
-  XCircle,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { Button } from "../../components/shared/Button";

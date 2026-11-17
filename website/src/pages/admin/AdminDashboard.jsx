@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import {
   Activity,
-  AlertTriangle,
   ArrowUpRight,
   CheckCircle,
   Database,
   ExternalLink,
   Flame,
   Globe,
-  Layers,
   MessageSquare,
   Newspaper,
   PhoneCall,
@@ -20,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { Button } from "../../components/shared/Button";
-import { LiveBadge, VerdictBadge } from "../../components/shared/Badge";
+import { LiveBadge } from "../../components/shared/Badge";
 import { fetchAdminReports, syncScraperNow, updateAdminReportStatus } from "../../services/adminApi";
 
 export function AdminDashboard() {

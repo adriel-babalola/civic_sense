@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test test/testMetaWhatsapp.js test/testPipeline.js 2>/dev/null || node test/testKratos.js",
+    "test": "node test/testFeatures.js && node --test test/testMetaWhatsapp.js test/testPipeline.js 2>/dev/null || node test/testKratos.js",
+    "test:features": "node test/testFeatures.js",
+    "test:e2e": "node test/testMapE2E.mjs",
+    "backfill:civic": "node scripts/backfill-civic.js",
     "test:router": "node test/testLlmRouter.js",
     "verify:feeds": "node scripts/verify-feeds.js",
     "setup:telegram": "node scripts/setup-telegram.js",

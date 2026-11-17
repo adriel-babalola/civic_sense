@@ -65,7 +65,7 @@ services:
       - key: SCRAPE_INTERVAL_MIN
         value: "30"
       - key: ARTICLE_TTL_DAYS
-        value: "14"
+        value: "180"
       - key: MEDIA_MAX_MB
         value: "5"
       - key: META_MEDIA_MAX_MB

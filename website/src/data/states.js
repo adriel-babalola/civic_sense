@@ -120,6 +120,18 @@ export function fromApiStateName(state) {
   return state === "FCT" ? "FCT (Abuja)" : state;
 }
 
+/**
+ * The boundary GeoJSON labels the capital territory "Abuja Federal Capital
+ * Territory"; the API and this app call it "FCT". This maps a boundary feature
+ * name onto the API name so a map click resolves to the same state the news is
+ * tagged with.
+ */
+export function fromBoundaryName(name) {
+  if (!name) return "";
+  if (/abuja|federal capital/i.test(name)) return "FCT";
+  return name;
+}
+
 export function getCoords(state) {
   return STATE_COORDS[state] || STATE_COORDS[fromApiStateName(state)] || null;
 }

@@ -737,7 +737,7 @@ export const PHOTO_PACK = [
     "onCommons": false,
     "sourceIsStable": true,
     "author": null,
-    "rosterId": "adebayo-adewale-ebenezer"
+    "rosterId": null
   },
   {
     "order": 107,

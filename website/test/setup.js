@@ -47,6 +47,12 @@ if (!URL.createObjectURL) {
   URL.revokeObjectURL = () => {};
 }
 
+// No test may make a real network call. Components that fetch (the live feed,
+// the state news panel) fall back to bundled data or an empty state, which is
+// what the tests assert against. Without this, a machine with connectivity
+// would hit the production API from the test run.
+globalThis.fetch = vi.fn(() => Promise.reject(new Error("network disabled in tests")));
+
 /**
  * Leaflet mock.
  *

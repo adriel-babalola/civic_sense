@@ -1,19 +1,14 @@
 import { NavLink } from "react-router-dom";
 import {
   Activity,
-  BarChart3,
-  CheckCircle2,
   Database,
-  ExternalLink,
   FileEdit,
   LayoutDashboard,
   ListChecks,
   LogOut,
   Newspaper,
-  Shield,
   ShieldAlert,
   User,
-  Users,
 } from "lucide-react";
 import { cn } from "../../utils/cn";
 import { LiveBadge } from "../shared/Badge";

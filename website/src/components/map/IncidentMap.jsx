@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { NIGERIA_BOUNDS } from "../../data/states";
+import { NIGERIA_BOUNDS, fromBoundaryName } from "../../data/states";
 import { STATE_BOUNDARIES, BOUNDARY_ATTRIBUTION } from "../../data/nigeria-boundaries";
 import { INCIDENT_META } from "../../utils/constants";
 import { cn } from "../../utils/cn";
@@ -35,9 +35,31 @@ const MARKER_COLOR = {
   violence: "#ef4444",
   misconduct: "#f59e0b",
   unrest: "#f97316",
+  news: "#eab308",
 };
 
 const MARKER_SIZE = 14;
+
+/**
+ * State polygon styling. Four states: resting, has-news, hovered, and selected.
+ *
+ * States with tagged news are lifted slightly off the background so a visitor
+ * can see where there is something to click before clicking. The selected state
+ * lifts further still, and the side panel names it, so selection is never
+ * carried by colour alone.
+ */
+const STATE_STYLE = {
+  base: { color: "#3f3f46", weight: 1, fillColor: "#111113", fillOpacity: 1 },
+  hasNews: { color: "#52525b", weight: 1.2, fillColor: "#1b1b20", fillOpacity: 1 },
+  hover: { color: "#71717a", weight: 1.5, fillColor: "#232329", fillOpacity: 1 },
+  active: { color: "#eab308", weight: 2, fillColor: "#27240a", fillOpacity: 1 },
+};
+
+function stateStyle(feature, { isActive = false, hasNews = false } = {}) {
+  if (isActive) return STATE_STYLE.active;
+  if (hasNews) return STATE_STYLE.hasNews;
+  return STATE_STYLE.base;
+}
 
 /** Graticule every 2 degrees. Generated in the browser, so it costs no request. */
 function graticuleDataUri() {
@@ -85,12 +107,20 @@ function markerIcon(type, isActive) {
  * @param {(id: string) => void} onSelect Fired on marker click.
  * @param {string} className Height and layout. The caller must set a height.
  */
-export function IncidentMap({ markers, activeId, onSelect, center, zoom, className }) {
+export function IncidentMap({ markers, activeId, onSelect, center, zoom, className, activeState, onStateSelect, newsStates = [] }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const layersRef = useRef(null);
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onStateSelectRef = useRef(onStateSelect);
+  onStateSelectRef.current = onStateSelect;
+  const activeStateRef = useRef(activeState);
+  activeStateRef.current = activeState;
+  const stateLayerRef = useRef(null);
+  // A Set for O(1) membership while styling every polygon on each pass.
+  const newsSetRef = useRef(new Set());
+  newsSetRef.current = new Set(newsStates);
 
   // Create the map once. It is never torn down on a data change, because
   // recreating it would drop the user's zoom and pan on every poll.
@@ -111,15 +141,34 @@ export function IncidentMap({ markers, activeId, onSelect, center, zoom, classNa
       [NIGERIA_BOUNDS.northEast[0], NIGERIA_BOUNDS.northEast[1]],
     ]).addTo(map);
 
-    L.geoJSON(STATE_BOUNDARIES, {
-      interactive: false,
-      style: {
-        color: "#3f3f46",
-        weight: 1,
-        fillColor: "#111113",
-        fillOpacity: 1,
+    // State outlines are interactive: clicking one selects that state and opens
+    // the state news panel. `onEachFeature` binds the click; the base style is
+    // set by the `style` function and the selection restyle happens in its own
+    // effect below, so a selection change does not rebuild the layer.
+    const stateLayer = L.geoJSON(STATE_BOUNDARIES, {
+      interactive: true,
+      style: (feature) =>
+        stateStyle(feature, {
+          hasNews: newsSetRef.current.has(fromBoundaryName(feature?.properties?.name) || feature?.properties?.name),
+        }),
+      onEachFeature: (feature, layer) => {
+        const boundaryName = feature?.properties?.name;
+        if (!boundaryName || !layer?.on) return;
+        const apiName = fromBoundaryName(boundaryName) || boundaryName;
+        layer.on({
+          click: () => onStateSelectRef.current?.(apiName),
+          mouseover: () => layer.setStyle?.(STATE_STYLE.hover),
+          mouseout: () =>
+            layer.setStyle?.(
+              stateStyle(feature, {
+                isActive: apiName === activeStateRef.current,
+                hasNews: newsSetRef.current.has(apiName),
+              }),
+            ),
+        });
       },
     }).addTo(map);
+    stateLayerRef.current = stateLayer;
 
     L.control.zoom({ position: "bottomright" }).addTo(map);
 
@@ -133,6 +182,7 @@ export function IncidentMap({ markers, activeId, onSelect, center, zoom, classNa
       map.remove();
       mapRef.current = null;
       layersRef.current = null;
+      stateLayerRef.current = null;
     };
     // `center` and `zoom` are module constants at every call site, so listing
     // them here does not recreate the map on a poll.
@@ -171,17 +221,35 @@ export function IncidentMap({ markers, activeId, onSelect, center, zoom, classNa
 
     for (const incident of markers) {
       const isActive = incident.id === activeId;
+      const label =
+        incident.type === "news"
+          ? `${incident.count || 0} ${incident.count === 1 ? "story" : "stories"} in ${incident.state}`
+          : `${INCIDENT_META[incident.type]?.label || "Incident"} in ${incident.state}`;
       L.marker(incident.coords, {
         icon: markerIcon(incident.type, isActive),
         keyboard: true,
-        title: `${INCIDENT_META[incident.type]?.label || "Incident"} in ${incident.state}`,
-        alt: `${INCIDENT_META[incident.type]?.label || "Incident"} in ${incident.state}`,
+        title: label,
+        alt: label,
         riseOnHover: true,
       })
         .on("click", () => onSelectRef.current?.(incident.id))
         .addTo(group);
     }
   }, [markers, activeId]);
+
+  // Restyle the state polygons when the selection changes. Leaflet's GeoJSON
+  // setStyle accepts a function of the feature, so one pass repaints every state
+  // without rebuilding the layer or losing the viewport.
+  useEffect(() => {
+    const layer = stateLayerRef.current;
+    if (!layer?.setStyle) return;
+    const news = new Set(newsStates);
+    layer.setStyle((feature) => {
+      const boundaryName = feature?.properties?.name;
+      const apiName = fromBoundaryName(boundaryName) || boundaryName;
+      return stateStyle(feature, { isActive: apiName === activeState, hasNews: news.has(apiName) });
+    });
+  }, [activeState, newsStates]);
 
   return (
     <div
@@ -211,7 +279,7 @@ export function IncidentMap({ markers, activeId, onSelect, center, zoom, classNa
       `}</style>
 
       <p className="pointer-events-none absolute left-3 top-3 z-[500] rounded-control border border-line bg-surface/85 px-2 py-1 text-2xs text-fg-faint backdrop-blur-sm">
-        {markers.length} plotted · markers sit at state-capital coordinates
+        {markers.length} plotted · tap a state for its news
       </p>
 
       {/* Attribution is a licence condition of the boundary data, so it is on

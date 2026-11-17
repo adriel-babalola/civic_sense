@@ -172,13 +172,14 @@ router.patch("/reports/:id", requireAdmin, async (req, res) => {
  */
 router.get("/claims", requireAdmin, async (req, res) => {
   try {
-    const { page, limit, search, verdict, channel } = req.query;
+    const { page, limit, search, verdict, channel, civic } = req.query;
     const result = await getFactChecksPaginated({
       page: Number(page) || 1,
       limit: Number(limit) || 20,
       search: search || "",
       verdict: verdict || "",
       channel: channel || "",
+      civic: civic || "",
     });
     res.json({
       success: true,

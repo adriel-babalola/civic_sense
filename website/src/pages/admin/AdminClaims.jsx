@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  CheckCircle2,
   ExternalLink,
-  Filter,
   Globe,
   ListChecks,
   MessageSquare,
@@ -21,7 +19,7 @@ export function AdminClaims() {
   const [search, setSearch] = useState("");
   const [verdictFilter, setVerdictFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
-  const [total, setTotal] = useState(0);
+  const [, setTotal] = useState(0);
 
   const loadClaims = async () => {
     setLoading(true);

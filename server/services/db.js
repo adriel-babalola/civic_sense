@@ -1,11 +1,22 @@
 import mongoose from "mongoose";
+import { detectStates, articleText } from "./geo.js";
 
 const factCheckSchema = new mongoose.Schema(
   {
     claim: { type: String },
     verdict: String,
+    // The assistant's own answer text (whatWeFound). Stored separately from the
+    // formatted WhatsApp string so the website feed can show the query AND the
+    // response without re-parsing the message.
+    response: String,
+    // The civic tag. A record is only shown on the public feed when this is not
+    // false: true means the request was Nigerian civic/political fact-checking,
+    // false means general chat or an off-topic redirect. Legacy records written
+    // before the field existed have no value and remain visible.
+    civic: { type: Boolean, default: null },
     channel: { type: String, default: "test" },
     intent: String,
+    state: String,
     searchQuery: String,
     routerSource: String,
     timestamp: { type: Date, default: Date.now },
@@ -14,6 +25,7 @@ const factCheckSchema = new mongoose.Schema(
   { autoIndex: true }
 );
 factCheckSchema.index({ timestamp: -1 });
+factCheckSchema.index({ civic: 1, timestamp: -1 });
 factCheckSchema.index({ claim: "text" });
 
 const FactCheck = mongoose.model("FactCheck", factCheckSchema);
@@ -29,6 +41,11 @@ const articleSchema = new mongoose.Schema(
     sourceBase: String,
     category: { type: String, default: "news" },
     region: String,
+    // Nigerian states named anywhere in the headline or body. Inferred by
+    // services/geo.js at scrape time; the map groups stories on primaryState and
+    // a story spanning a border can honestly carry more than one.
+    states: { type: [String], default: [], index: true },
+    primaryState: { type: String, default: null },
     pubDate: Date,
     createdAt: { type: Date, default: Date.now },
   },
@@ -36,7 +53,8 @@ const articleSchema = new mongoose.Schema(
 );
 articleSchema.index({ title: "text", snippet: "text", content: "text", source: "text" });
 articleSchema.index({ pubDate: -1 });
-articleSchema.index({ createdAt: 1 }, { expireAfterSeconds: (Number(process.env.ARTICLE_TTL_DAYS) || 14) * 86400 });
+articleSchema.index({ primaryState: 1, pubDate: -1 });
+articleSchema.index({ createdAt: 1 }, { expireAfterSeconds: (Number(process.env.ARTICLE_TTL_DAYS) || 180) * 86400 });
 
 const Article = mongoose.model("Article", articleSchema);
 
@@ -153,30 +171,57 @@ const feedbackSchema = new mongoose.Schema({
 feedbackSchema.index({ timestamp: -1 });
 const Feedback = mongoose.model("Feedback", feedbackSchema);
 
+// One shared connection attempt. Several call sites (the scraper, the boot
+// backfill, an HTTP request) can race here on a cold start; without this they
+// each call mongoose.connect() and a losing attempt rejects unhandled, which
+// takes the process down.
+let connecting = null;
+
+mongoose.connection.on("error", (err) =>
+  console.error(`[DB] connection error: ${err.message}`)
+);
+
 export async function connectDB() {
-  if (mongoose.connection.readyState === 0) {
-    if (!process.env.MONGODB_URI) {
-      console.warn("[DB] MONGODB_URI not set — running without persistent storage.");
-      return false;
-    }
-    mongoose.connection.on("error", (err) =>
-      console.error(`[DB] connection error: ${err.message}`)
-    );
-    await mongoose.connect(process.env.MONGODB_URI, {
-      serverSelectionTimeoutMS: 5000,
-      connectTimeoutMS: 10000,
-      maxPoolSize: 10,
-    });
-    await Promise.allSettled([
-      FactCheck.init(),
-      Article.init(),
-      Report.init(),
-      AdminUser.init(),
-      ProfileSuggestion.init(),
-    ]);
-    console.log("[DB] MongoDB connected");
+  if (mongoose.connection.readyState === 1) return true;
+  if (!process.env.MONGODB_URI) {
+    console.warn("[DB] MONGODB_URI not set — running without persistent storage.");
+    return false;
   }
-  return mongoose.connection.readyState === 1;
+
+  if (!connecting) {
+    connecting = mongoose
+      .connect(process.env.MONGODB_URI, {
+        // A cold SRV lookup plus TLS handshake on a free-tier cluster can take
+        // longer than five seconds, which is what made the first deploy flap.
+        serverSelectionTimeoutMS: 15000,
+        connectTimeoutMS: 20000,
+        socketTimeoutMS: 45000,
+        maxPoolSize: 10,
+      })
+      .then(async () => {
+        await Promise.allSettled([
+          FactCheck.init(),
+          Article.init(),
+          Report.init(),
+          AdminUser.init(),
+          ProfileSuggestion.init(),
+        ]);
+        console.log("[DB] MongoDB connected");
+        return true;
+      })
+      .finally(() => {
+        connecting = null;
+      });
+  }
+
+  try {
+    return await connecting;
+  } catch (err) {
+    // Never throw. Callers treat a false return as "no storage" and degrade;
+    // throwing here is what crashed the server on an unreachable database.
+    console.error(`[DB] connect failed: ${err.message.split("\n")[0]}`);
+    return false;
+  }
 }
 
 export function isDbConnected() {
@@ -194,11 +239,15 @@ export async function saveFactCheck(data) {
   }
 }
 
-export async function getRecentFactChecks(limit = 20) {
+export async function getRecentFactChecks(limit = 20, { civicOnly = true } = {}) {
   try {
     await connectDB();
     if (!isDbConnected()) return [];
-    return await FactCheck.find()
+    // The public feed only shows responses that carry the civic tag. `$ne: false`
+    // rather than `=== true` keeps legacy rows (written before the field existed)
+    // visible instead of blanking the feed on deploy.
+    const query = civicOnly ? { civic: { $ne: false } } : {};
+    return await FactCheck.find(query)
       .sort({ timestamp: -1 })
       .limit(limit)
       .lean();
@@ -252,6 +301,44 @@ export async function searchArticles(claim, limit = 8) {
   }
 }
 
+/**
+ * Tag every stored article that predates state tagging.
+ *
+ * The state tag was added after the article index already held rows, so on the
+ * first deploy nothing on the map would be tagged until the feeds cycled. This
+ * walks the untagged rows once, computes the states from the copy, and writes
+ * them back. Idempotent: it only ever looks at rows with no tags.
+ */
+export async function backfillArticleStates(limit = 1000) {
+  try {
+    await connectDB();
+    if (!isDbConnected()) return 0;
+    const docs = await Article.find({
+      $or: [{ states: { $exists: false } }, { states: { $size: 0 } }],
+    })
+      .select("title snippet content")
+      .limit(limit)
+      .lean();
+    if (!docs.length) return 0;
+
+    const ops = docs.map((doc) => {
+      const states = detectStates(articleText(doc));
+      return {
+        updateOne: {
+          filter: { _id: doc._id },
+          update: { $set: { states, primaryState: states[0] || null } },
+        },
+      };
+    });
+    const res = await Article.bulkWrite(ops, { ordered: false });
+    console.log(`[DB] Backfilled state tags on ${res.modifiedCount} articles`);
+    return res.modifiedCount;
+  } catch (err) {
+    console.error(`DB backfill error: ${err.message}`);
+    return 0;
+  }
+}
+
 export async function getLatestArticles(limit = 6) {
   try {
     await connectDB();
@@ -262,6 +349,54 @@ export async function getLatestArticles(limit = 6) {
       .lean();
   } catch (err) {
     console.error(`DB latest articles error: ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * How many stored stories are tagged to each state.
+ *
+ * Aggregates on `states` (the array) so a story naming two states counts under
+ * both, which is the honest reading for a map pin. Sorted by volume, newest
+ * first as a tiebreak after count.
+ */
+export async function getStateNewsCounts({ sinceDays = null } = {}) {
+  try {
+    await connectDB();
+    if (!isDbConnected()) return [];
+    const pipeline = [];
+    if (sinceDays) {
+      const since = new Date(Date.now() - sinceDays * 86400000);
+      pipeline.push({ $match: { pubDate: { $gte: since } } });
+    }
+    pipeline.push(
+      { $unwind: "$states" },
+      { $group: { _id: "$states", count: { $sum: 1 }, latest: { $max: "$pubDate" } } },
+      { $sort: { count: -1, latest: -1 } }
+    );
+    return await Article.aggregate(pipeline);
+  } catch (err) {
+    console.error(`DB state counts error: ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Recent stories for one state (or several), newest first.
+ * @param {string|string[]} state
+ */
+export async function getArticlesByState(state, limit = 20) {
+  try {
+    await connectDB();
+    if (!isDbConnected()) return [];
+    const states = Array.isArray(state) ? state : [state];
+    if (!states.length) return [];
+    return await Article.find({ states: { $in: states } })
+      .sort({ pubDate: -1, createdAt: -1 })
+      .limit(Math.min(Math.max(1, limit), 100))
+      .lean();
+  } catch (err) {
+    console.error(`DB state articles error: ${err.message}`);
     return [];
   }
 }
@@ -401,13 +536,15 @@ export async function updateProfileSuggestionStatus(id, { status, reviewNotes, r
   }
 }
 
-export async function getFactChecksPaginated({ page = 1, limit = 20, search = "", verdict = "", channel = "" } = {}) {
+export async function getFactChecksPaginated({ page = 1, limit = 20, search = "", verdict = "", channel = "", civic = "" } = {}) {
   try {
     await connectDB();
     if (!isDbConnected()) return { items: [], total: 0, page, totalPages: 1 };
     const query = {};
     if (verdict) query.verdict = verdict.toUpperCase();
     if (channel) query.channel = channel.toLowerCase();
+    if (civic === "civic") query.civic = true;
+    else if (civic === "non-civic") query.civic = false;
     if (search) {
       query.$or = [
         { claim: { $regex: search, $options: "i" } },

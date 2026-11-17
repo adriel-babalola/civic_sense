@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { AlertCircle, ImageIcon, Loader2, RotateCcw, Send } from "lucide-react";
 import { CONFIG } from "../../config/config";
+import { runSampleFactCheck } from "../../data/demo-data";
 import { Container, PageHeader, SectionHeading } from "../../components/shared/Layout";
 import { Button } from "../../components/shared/Button";
 import { Alert } from "../../components/shared/Field";
 import { Textarea } from "../../components/shared/Input";
 import { FileUpload } from "../../components/shared/FileUpload";
 import { VerdictCard, VerdictExplainer } from "../../components/sections/VerdictCard";
-import { SampleBanner } from "../../components/shared/SampleBanner";
 
 /**
  * A handful of real claims, offered as a starting point. A blank box is a
@@ -52,9 +52,10 @@ export function FactCheck() {
     setError(null);
     setResult(null);
 
+    const claimText = claim.trim() || caption.trim();
+
     try {
       const formData = new FormData();
-      const claimText = claim.trim() || caption.trim();
       if (claimText) {
         formData.append("claim", claimText);
       }
@@ -77,8 +78,13 @@ export function FactCheck() {
       }
 
       setResult(data.data);
-    } catch (err) {
-      setError(err);
+    } catch {
+      // The live pipeline is unreachable (offline, or the server is down). Fall
+      // back to the bundled sample index so the page still answers, and label
+      // the result as a sample. An unlabelled canned verdict would be the one
+      // dishonest thing this page could do, so the label travels with it.
+      setResult(claimText ? runSampleFactCheck(claimText) : null);
+      setError(claimText ? null : new Error("Add a claim or an image first."));
     } finally {
       setIsRunning(false);
     }
@@ -292,6 +298,13 @@ function ResultPanel({ result, error, isRunning }) {
   return (
     <div className="cs-enter space-y-3">
       <VerdictCard record={result} />
+
+      {result.isSample ? (
+        <Alert tone="info" title="Sample result">
+          The live pipeline was unreachable, so this is a demonstration verdict from the bundled
+          sample index, not a real fact-check.
+        </Alert>
+      ) : null}
 
       {result.extractedClaim ? (
         <Alert tone="info" title="Claim read from the image">

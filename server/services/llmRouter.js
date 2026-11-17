@@ -22,8 +22,14 @@ Rules:
 - For fact_check, reply is empty string and search_query should capture the claim clearly (fix obvious typos like "fule"->"fuel" in search_query).
 - Context matters: follow-up messages like "no like how are you?" are chat, not redirect.
 
+The "civic" flag (the CIVIC TAG):
+- Set "civic": true when the request falls within CivicSense's mission: anything about Nigeria's public life — politics, government, elections, public officials, policies, laws, courts, security, agencies, economy/cost-of-living tied to government, protests, or viral Nigerian civic rumors. This is true for both "fact_check" and "civic_info".
+- Set "civic": false for anything outside that mission, however factual: general-knowledge questions (e.g. "did Artemis II really go to the moon"), science, sports, entertainment, foreign politics, coding, essays, or pure small talk.
+- The rule is about the SUBJECT, not the format. A verifiable question about the moon is still not civic. A vague question about Nigerian politics is still civic.
+- Only responses with "civic": true are shown on the public website feed.
+
 Return ONLY valid JSON:
-{"intent":"fact_check|civic_info|chat|redirect","reply":"one sentence or empty for fact_check","search_query":"search query for fact_check/civic_info else empty","confidence":0-1}`;
+{"intent":"fact_check|civic_info|chat|redirect","civic":true|false,"reply":"one sentence or empty for fact_check","search_query":"search query for fact_check/civic_info else empty","confidence":0-1}`;
 
 function parseJson(raw) {
   try {
@@ -50,11 +56,24 @@ function oneSentence(text, fallbackText) {
 const REDIRECT_REPLY =
   "My sole purpose is Nigerian civic and political fact-checking, so please use another LLM for that request.";
 
+/**
+ * Civic-topic heuristic, shared by the router fallback and the one-off backfill
+ * of records written before the CIVIC tag existed.
+ *
+ * It answers one question: does this text concern Nigeria's public life? It is
+ * deliberately broad on Nigerian civic nouns and narrow on everything else, so
+ * "where did that come from" and a bare link come back non-civic.
+ */
+const CIVIC_RE = /\b(nigeria|nigerian|naira|tinubu|shettima|obi|atiku|inec|apc|pdp|lp|nnpp|adc|senate|house of reps|governor|president|minister|election|vote|voter|ballot|policy|budget|subsidy|constitution|court|supreme court|efcc|icpc|police|nnpcl|nnpc|fuel|petrol|pms|diesel|kerosene|price|prices|inflation|economy|tax|levy|tariff|bill|law|reform|protest|tribunal|campaign|cabinet|ministerial|judiciary|corruption|bribe|fule|petrl|petro)\b/;
+
+export function civicHeuristic(text) {
+  return CIVIC_RE.test(String(text || "").toLowerCase());
+}
+
 function fallback(text, context = {}) {
   const raw = String(text || "").trim();
   const t = raw.toLowerCase();
-  const civic = /\b(nigeria|nigerian|tinubu|shettima|obi|atiku|inec|apc|pdp|lp|nnpp|adc|senate|house of reps|governor|president|minister|election|vote|voter|ballot|policy|budget|naira|subsidy|constitution|court|supreme court|efcc|icpc|police|nnpcl|nnpc|fuel|petrol|pms|diesel|kerosene|price|prices|inflation|economy|tax|levy|tariff|bill|law|reform|protest|tribunal|campaign|cabinet|ministerial|judiciary|corruption|bribe)\b/.test(t)
-    || /\b(fule|petrl|petro)\b/.test(t); // common typos
+  const civic = civicHeuristic(raw);
   const claimLike = /\b(is|are|was|were|did|does|do|has|have|had|true|false|fact.?check|verify|rumou?r|fake|hoax|claim|alleg|said|says|promise|dead|alive|resign|arrest|appoint|ban|cancel|win|lose|announce|increase|reduce|hit|hits|cost|costs|worth|pay|paid|now|current|today|latest)\b/.test(t)
     || /\d/.test(t) || /\?/.test(t);
   const identityChat = /\b(who are you|what are you|what can you do|what do you do|your name)\b/.test(t);
@@ -106,9 +125,30 @@ function normalizeIntent(intent) {
   return "chat";
 }
 
+/**
+ * The CIVIC tag, derived from intent.
+ *
+ * fact_check and civic_info are, by definition, within CivicSense's mission.
+ * chat and redirect are not. Used as the fallback whenever the model does not
+ * return an explicit boolean, so a routing outage cannot leak off-topic chatter
+ * onto the public feed.
+ */
+export function isCivicIntent(intent) {
+  return intent === "fact_check" || intent === "civic_info";
+}
+
+/** Ensure a route object carries a boolean `civic` field. */
+function withCivic(route) {
+  if (!route) return route;
+  return {
+    ...route,
+    civic: typeof route.civic === "boolean" ? route.civic : isCivicIntent(route.intent),
+  };
+}
+
 export async function routeConversationalMessage(text, context = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) return fallback(text, context);
+  if (!apiKey) return withCivic(fallback(text, context));
   try {
     const recent = Array.isArray(context?.recent) ? context.recent.slice(-4) : [];
     const response = await axios.post(
@@ -138,7 +178,7 @@ export async function routeConversationalMessage(text, context = {}) {
     );
     const raw = response.data?.choices?.[0]?.message?.content || "";
     const parsed = parseJson(raw);
-    if (!parsed?.intent) return fallback(text, context);
+    if (!parsed?.intent) return withCivic(fallback(text, context));
     const intent = normalizeIntent(parsed.intent);
     const rawReply = String(parsed.reply || "").trim();
     const reply =
@@ -150,6 +190,9 @@ export async function routeConversationalMessage(text, context = {}) {
           );
     return {
       intent,
+      // Trust the model's civic tag when it is a real boolean; otherwise derive
+      // it from the intent, which is the same mission test the prompt describes.
+      civic: typeof parsed.civic === "boolean" ? parsed.civic : isCivicIntent(intent),
       reply,
       search_query: String(parsed.search_query || (intent === "fact_check" ? text : "")).trim().slice(0, 240),
       confidence: Math.min(1, Math.max(0, Number(parsed.confidence || 0.5))),
@@ -157,6 +200,6 @@ export async function routeConversationalMessage(text, context = {}) {
     };
   } catch (err) {
     console.error(`[Router] OpenRouter/DeepSeek failed: ${err.message}`);
-    return fallback(text, context);
+    return withCivic(fallback(text, context));
   }
 }

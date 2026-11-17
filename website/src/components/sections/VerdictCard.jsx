@@ -89,13 +89,27 @@ export function VerdictCard({ record, className, showClaim = true, showSource = 
 
 /** Compact one-line verdict row, for dense lists. */
 export function VerdictRow({ record, className }) {
-  const { verdict, source } = parseVerdict(record?.verdict);
+  const { verdict, source, evidence } = parseVerdict(record?.verdict);
+  // The stored response text. `record.response` is the field written from now
+  // on; `structured.whatWeFound` and the parsed `evidence` cover older rows and
+  // the bundled samples, which never had a separate response field.
+  const finding = record?.response || record?.structured?.whatWeFound || evidence;
   return (
     <div className={cn("flex items-start gap-3 border-b border-line-subtle py-2.5 last:border-b-0", className)}>
       <VerdictBadge verdict={verdict} size="sm" className="mt-0.5 shrink-0" />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-fg">{record?.claim || "Image claim"}</p>
-        <p className="truncate text-2xs text-fg-faint">
+        <div className="flex items-center gap-2">
+          <p className="truncate text-sm text-fg">{record?.claim || "Image claim"}</p>
+          {record?.civic ? (
+            <span className="shrink-0 rounded-full border border-brand-bright/25 bg-brand-bright/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-bright">
+              Civic
+            </span>
+          ) : null}
+        </div>
+        {finding ? (
+          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-fg-secondary">{finding}</p>
+        ) : null}
+        <p className="mt-1 truncate text-2xs text-fg-faint">
           {source ? truncate(source, 60) : "No source listed"}
           {record?.timestamp ? ` · ${relativeTime(record.timestamp)}` : ""}
         </p>

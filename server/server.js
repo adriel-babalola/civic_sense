@@ -18,6 +18,10 @@ import {
   countArticles,
   saveProfileSuggestion,
   saveFeedback,
+  getStateNewsCounts,
+  getArticlesByState,
+  getLatestArticles,
+  backfillArticleStates,
 } from "./services/db.js";
 import { startScraper, getScraperStats, syncOnce } from "./services/scraper.js";
 import { validateImageBuffer, bufferToDataUrl, imageFromUrl } from "./services/image.js";
@@ -37,6 +41,7 @@ import {
 } from "./services/metaWhatsapp.js";
 import { routeMessage } from "./services/messageRouter.js";
 import { NEWS_SOURCES } from "./services/newsSources.js";
+import { detectStates, NIGERIAN_STATES } from "./services/geo.js";
 import adminRouter from "./routes/admin.js";
 import { requireAdmin } from "./middleware/adminAuth.js";
 
@@ -110,7 +115,10 @@ app.post("/api/scrape", async (req, res) => {
 
 app.get("/api/factchecks", async (req, res) => {
   try {
-    const checks = await getRecentFactChecks(50);
+    // Public feed: CIVIC-tagged responses only. The admin console reads every
+    // channel (including non-civic) through /api/admin routes instead.
+    const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+    const checks = await getRecentFactChecks(limit, { civicOnly: true });
     res.json({ success: true, data: checks });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -132,6 +140,36 @@ function parseImagePayload(req) {
     return { imageDataUrl: null, caption: req.body?.caption || "", imageUrl };
   }
   return null;
+}
+
+function civicFlag(route) {
+  return typeof route?.civic === "boolean" ? route.civic : undefined;
+}
+
+/**
+ * Persist one interaction against a channel.
+ *
+ * Every interaction is stored with its CIVIC tag. The public feed asks for
+ * civic rows only; the admin console can read the rest. `response` is the
+ * assistant's own answer text so the website can show the query AND the reply
+ * rather than only the claim.
+ */
+async function persistFactCheck({ claim, verdict, response, route, channel = "api", hashedFrom }) {
+  try {
+    await saveFactCheck({
+      claim,
+      verdict,
+      response,
+      civic: civicFlag(route),
+      intent: route?.intent,
+      state: detectStates(claim || "")[0] || undefined,
+      channel,
+      hashedFrom,
+      timestamp: new Date(),
+    });
+  } catch (err) {
+    console.error("DB save error:", err.message);
+  }
 }
 
 async function handleFactCheck(req, res) {
@@ -161,11 +199,21 @@ async function handleFactCheck(req, res) {
     if (!imageDataUrl && claim) {
       const route = await routeMessage(claim, { hasImage: false });
       if (route.intent !== "fact-check") {
+        // Off-mission (chat / civic-info / redirect). Stored with the CIVIC tag
+        // so it never reaches the public feed, but visible to moderation.
+        await persistFactCheck({
+          claim,
+          verdict: route.reply,
+          response: route.reply,
+          route,
+          channel: "api",
+        });
         return res.json({
           success: true,
           data: {
             claim,
             mode: route.intent,
+            civic: route.civic,
             reply: route.reply,
             verdict: route.reply,
             structured: { verdict: "CONVERSATION", confidence: 0, whatWeFound: route.reply, source: "CivicSense", sources: [] },
@@ -175,23 +223,26 @@ async function handleFactCheck(req, res) {
       }
       // use router's search query to improve retrieval
       const result = await runFactCheck({ claim, imageDataUrl, caption, searchQuery: route.searchQuery || "" });
-      await saveFactCheck({
+      await persistFactCheck({
         claim: result.claim || claim,
         verdict: result.verdict,
+        response: result.structured?.whatWeFound || result.verdict,
+        route,
         channel: "api",
-        timestamp: new Date(),
-      }).catch((err) => console.error("DB save error:", err.message));
+      });
       return res.json({ success: true, data: result });
     }
 
     const result = await runFactCheck({ claim, imageDataUrl, caption });
 
-    await saveFactCheck({
+    await persistFactCheck({
       claim: result.claim || claim,
       verdict: result.verdict,
+      response: result.structured?.whatWeFound || result.verdict,
+      // An image request is always a civic fact-check.
+      route: { civic: true, intent: "fact_check" },
       channel: "api",
-      timestamp: new Date(),
-    }).catch((err) => console.error("DB save error:", err.message));
+    });
 
     res.json({ success: true, data: result });
   } catch (err) {
@@ -210,15 +261,17 @@ app.post("/api/chat", async (req, res) => {
   try {
     const route = await routeMessage(claim, { hasImage: false });
     if (route.intent !== "fact-check") {
-      return res.json({ success: true, data: { claim, mode: route.intent, reply: route.reply, verdict: route.reply } });
+      await persistFactCheck({ claim, verdict: route.reply, response: route.reply, route, channel: "dashboard" });
+      return res.json({ success: true, data: { claim, mode: route.intent, civic: route.civic, reply: route.reply, verdict: route.reply } });
     }
     const result = await runFactCheck({ claim, searchQuery: route.searchQuery || "" });
-    await saveFactCheck({
+    await persistFactCheck({
       claim,
       verdict: result.verdict,
+      response: result.structured?.whatWeFound || result.verdict,
+      route,
       channel: "dashboard",
-      timestamp: new Date(),
-    }).catch((err) => console.error("DB save error:", err.message));
+    });
     res.json({ success: true, data: { claim, verdict: result.verdict, structured: result.structured } });
   } catch (err) {
     console.error("Chat error:", err);
@@ -259,6 +312,7 @@ app.post("/webhook/meta", async (req, res) => {
     if (route.intent === "chat" && isFirst && !/\b(civicsense|hello|hi|hey|welcome)\b/i.test(reply)) {
       reply = `Welcome to CivicSense. ${reply}`;
     }
+    await persistFactCheck({ claim: message.text || "", verdict: reply, response: reply, route, channel: "whatsapp", hashedFrom: message.from });
     return sendMetaTextMessage(message.from, reply).catch((err) => {
       console.error("Meta reply error:", err.message);
     });
@@ -278,13 +332,14 @@ app.post("/webhook/meta", async (req, res) => {
         caption: message.caption || message.text,
         searchQuery: route.searchQuery,
       });
-      await saveFactCheck({
+      await persistFactCheck({
         claim: result.claim || message.text,
         verdict: result.verdict,
+        response: result.structured?.whatWeFound || result.verdict,
+        route,
         channel: "whatsapp",
         hashedFrom: message.from,
-        timestamp: new Date(),
-      }).catch((err) => console.error("DB save error:", err.message));
+      });
       await sendMetaTextMessage(message.from, result.verdict);
       console.log(`[Meta] Reply sent to ${message.from}`);
     } catch (err) {
@@ -329,18 +384,20 @@ app.post("/webhook/telegram", async (req, res) => {
       nextRecent.push({ role: "assistant", text: String(route.reply || "").slice(0, 240) });
       promptStates.set(String(message.chatId), { lastIntent: route.intent, recent: nextRecent });
       const reply = route.intent === "chat" && isFirst && !/\b(civicsense|hello|hi|hey|welcome)\b/i.test(route.reply) ? `Welcome to CivicSense. ${route.reply}` : route.reply;
+      await persistFactCheck({ claim: message.text || "", verdict: reply, response: reply, route, channel: "telegram", hashedFrom: String(message.chatId) });
       return sendMessage(message.chatId, reply);
     }
     promptStates.set(String(message.chatId), { lastIntent: "fact_checking", recent: nextRecent });
 
     const result = await runFactCheck({ claim: message.text, imageDataUrl, caption: message.text, searchQuery: route.searchQuery });
-    await saveFactCheck({
+    await persistFactCheck({
       claim: result.claim || message.text,
       verdict: result.verdict,
+      response: result.structured?.whatWeFound || result.verdict,
+      route,
       channel: "telegram",
       hashedFrom: String(message.chatId),
-      timestamp: new Date(),
-    }).catch((err) => console.error("DB save error:", err.message));
+    });
 
     await sendMessage(message.chatId, result.verdict);
   } catch (err) {
@@ -477,6 +534,90 @@ app.get("/api/sources", (req, res) => {
   res.json({ success: true, data: NEWS_SOURCES });
 });
 
+/* ---------------------------------------------------------------------------
+ * Incident map
+ *
+ * The state tags on scraped articles are the map's data source. One shape is
+ * returned to the website: for each state that has recent news, a count and the
+ * newest stories. The website resolves state centroids from its own bundled
+ * coordinates, so the API stays free of map geometry.
+ * ------------------------------------------------------------------------ */
+
+/** Trim a stored article down to what the map/list needs. */
+function publicArticle(article) {
+  return {
+    id: String(article._id || article.link || ""),
+    title: article.title || "",
+    link: article.link || "",
+    source: article.source || "",
+    sourceBase: article.sourceBase || "",
+    snippet: article.snippet || "",
+    imageUrl: article.imageUrl || null,
+    states: Array.isArray(article.states) ? article.states : [],
+    primaryState: article.primaryState || null,
+    pubDate: article.pubDate || article.createdAt || null,
+  };
+}
+
+app.get("/api/incidents/map", async (req, res) => {
+  try {
+    const days = Math.min(Math.max(Number(req.query.days) || 0, 0), 365);
+    const perState = Math.min(Math.max(Number(req.query.perState) || 5, 1), 20);
+    const maxStates = Math.min(Math.max(Number(req.query.states) || 20, 1), NIGERIAN_STATES.length + 1);
+
+    const counts = await getStateNewsCounts({ sinceDays: days || null });
+
+    const selected = counts
+      .filter((row) => row._id && (NIGERIAN_STATES.includes(row._id)))
+      .slice(0, maxStates);
+
+    const states = await Promise.all(
+      selected.map(async (row) => {
+        const articles = await getArticlesByState(row._id, perState);
+        return {
+          state: row._id,
+          count: row.count,
+          latest: row.latest || null,
+          articles: articles.map(publicArticle),
+        };
+      })
+    );
+
+    res.json({
+      success: true,
+      data: {
+        states,
+        totalStates: states.length,
+        updatedAt: new Date().toISOString(),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get("/api/news", async (req, res) => {
+  try {
+    const state = String(req.query.state || "").trim();
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
+    if (!state) return res.status(400).json({ success: false, error: "Provide ?state=" });
+    const articles = await getArticlesByState(state, limit);
+    res.json({ success: true, data: articles.map(publicArticle), state });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get("/api/news/latest", async (req, res) => {
+  try {
+    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 50);
+    const articles = await getLatestArticles(limit);
+    res.json({ success: true, data: articles.map(publicArticle) });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.use((err, req, res, next) => {
   if (err instanceof multer.MulterError || err.message?.includes("image")) {
     return res.status(400).json({ success: false, error: err.message });
@@ -489,6 +630,12 @@ const PORT = process.env.PORT || 3000;
 const server = app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startScraper();
+  // One-time, capped backfill so the incident map has tagged history on the
+  // first deploy instead of waiting for the feeds to cycle. Idempotent and
+  // fire-and-forget: a failure here must not take the server down.
+  connectDB()
+    .then(() => backfillArticleStates(500))
+    .catch((err) => console.error(`State backfill skipped: ${err.message}`));
 });
 
 async function shutdown(signal) {

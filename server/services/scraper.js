@@ -1,6 +1,7 @@
 import Parser from "rss-parser";
 import { NEWS_SOURCES } from "./newsSources.js";
 import { saveArticles, searchArticles as dbSearchArticles, isDbConnected } from "./db.js";
+import { detectStates, articleText } from "./geo.js";
 
 const INTERVAL_MS = (Number(process.env.SCRAPE_INTERVAL_MIN) || 30) * 60 * 1000;
 const MAX_MEMORY_ARTICLES = Number(process.env.SCRAPE_MEMORY_MAX) || 3000;
@@ -43,7 +44,7 @@ function extractImageUrl(item) {
 }
 
 function normalizeItem(item, source) {
-  return {
+  const normalized = {
     title: (item.title || "").trim().slice(0, 500),
     link: item.link || item.guid,
     snippet: (item.contentSnippet || "")
@@ -58,6 +59,13 @@ function normalizeItem(item, source) {
     region: source.region,
     pubDate: item.isoDate ? new Date(item.isoDate) : new Date(),
   };
+
+  // Infer the state(s) from the copy. This is what lets the incident map group a
+  // story under a state without the feed ever providing a structured location.
+  normalized.states = detectStates(articleText(normalized));
+  normalized.primaryState = normalized.states[0] || null;
+
+  return normalized;
 }
 
 async function fetchFeed(source) {
@@ -92,12 +100,14 @@ export async function syncOnce() {
 
   const batches = await Promise.all(NEWS_SOURCES.map(fetchFeed));
   const seen = new Set();
+  const collectedArticles = [];
   for (const batch of batches) {
     for (const article of batch) {
       if (article.link && !seen.has(article.link)) {
         seen.add(article.link);
         collected++;
         memoryArticles.unshift(article);
+        collectedArticles.push(article);
       }
     }
   }
@@ -106,7 +116,10 @@ export async function syncOnce() {
     memoryArticles.length = MAX_MEMORY_ARTICLES;
   }
 
-  stored = await saveArticles(memoryArticles.slice(0, 300));
+  // Persist everything collected this pass, not a fixed slice. The upsert on
+  // `link` makes a re-run idempotent, so the cost of storing a story twice is
+  // nothing and the cost of dropping one is a story the map never sees.
+  stored = await saveArticles(collectedArticles);
 
   lastSyncAt = new Date();
   lastSyncError = null;
