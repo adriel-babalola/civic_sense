@@ -37,7 +37,7 @@ function buildCalendarEmailHtml({ siteUrl, calendarUrl, webcalUrl }) {
           <!-- Header -->
           <tr>
             <td style="padding: 28px 24px; background: linear-gradient(135deg, #064e3b 0%, #0a0a0a 100%); border-bottom: 1px solid #262626;">
-              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #34d399; margin-bottom: 6px;">CIVICSENSE 🇳🇬</div>
+              <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #34d399; margin-bottom: 6px;">CIVICSENSE</div>
               <h1 style="margin: 0; color: #ffffff; font-size: 22px; font-weight: 700; line-height: 1.3;">
                 2027 Nigeria General Election Calendar
               </h1>
@@ -57,27 +57,27 @@ function buildCalendarEmailHtml({ siteUrl, calendarUrl, webcalUrl }) {
                 <tr>
                   <td style="padding-bottom: 10px;">
                     <a href="${webcalUrl}" style="display: block; text-align: center; background-color: #008751; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-size: 14px;">
-                      🍏 Add to Apple Calendar
+                      Add to Apple Calendar
                     </a>
                   </td>
                 </tr>
                 <tr>
                   <td style="padding-bottom: 10px;">
                     <a href="https://calendar.google.com/calendar/render?cid=${encodeURIComponent(calendarUrl)}" style="display: block; text-align: center; background-color: #1e3a8a; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-size: 14px; border: 1px solid #2563eb;">
-                      📅 Add to Google Calendar
+                      Add to Google Calendar
                     </a>
                   </td>
                 </tr>
                 <tr>
                   <td>
                     <a href="${calendarUrl}" style="display: block; text-align: center; background-color: #262626; color: #ffffff; font-weight: 600; text-decoration: none; padding: 12px 18px; border-radius: 8px; font-size: 14px; border: 1px solid #404040;">
-                      📥 Download .ics Calendar File
+                      Download .ics Calendar File
                     </a>
                   </td>
                 </tr>
               </table>
               <div style="font-size: 11px; color: #737373; margin-top: 10px; line-height: 1.4;">
-                💡 <em>Tip: You can also tap the <strong>nigeria-2027-elections.ics</strong> file attached to this email to add all 12 dates directly to your phone's Calendar!</em>
+                <em>Tip: You can also open the <strong>nigeria-2027-elections.ics</strong> file attached to this email to add all 12 dates directly to your calendar.</em>
               </div>
             </td>
           </tr>
@@ -155,7 +155,7 @@ export async function sendCalendarEmail(toEmail) {
     const payload = {
       from: fromEmail.includes("@resend.dev") ? fromEmail : (process.env.RESEND_FROM || "CivicSense <onboarding@resend.dev>"),
       to: [cleanEmail],
-      subject: "🇳🇬 Your 2027 Nigeria Election Calendar (Apple, Google & .ics)",
+      subject: "Your 2027 Nigeria Election Calendar (Apple, Google & .ics)",
       html,
       attachments: [
         {
